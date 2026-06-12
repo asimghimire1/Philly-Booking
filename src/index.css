@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand palette — Pain Away of Philly */
+  --color-navy: #0e2a44;
+  --color-navy-600: #14385a;
+  --color-teal: #2e8b9a;
+  --color-teal-600: #267885;
+  --color-mint: #eaf3f1;
+  --color-mint-200: #d8e9e6;
+
+  --font-display: "Fraunces", "Noto Sans SC", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: #eef1f4;
+  color: #0e2a44;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Interactive elements get a pointer; disabled ones don't. */
+button:not(:disabled),
+label[role="button"],
+summary,
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Smooth step transitions — content fades and rises slightly on each step. */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-step {
+  animation: step-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Pop-in with a soft overshoot — for badges, icons, and success marks. */
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pop {
+  animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Children rise in sequence — pair with an inline animation-delay to stagger. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Gentle lift + shadow on hover for interactive cards. */
+.hover-lift {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px -16px rgba(14, 42, 68, 0.35);
+}
+
+/* A slow sheen that sweeps across a surface, then pauses — draws the eye to a CTA. */
+@keyframes sheen {
+  0% {
+    transform: translateX(-160%) skewX(-15deg);
+  }
+  35%,
+  100% {
+    transform: translateX(260%) skewX(-15deg);
+  }
+}
+.animate-sheen {
+  animation: sheen 5s ease-in-out infinite;
+}
+
+/* Soft pulsing ring — used behind the confirmation checkmark. */
+@keyframes ring-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.animate-ring {
+  animation: ring-pulse 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
