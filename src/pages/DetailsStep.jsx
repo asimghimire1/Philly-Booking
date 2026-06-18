@@ -101,36 +101,6 @@ export default function DetailsStep() {
           />
         </label>
 
-        {/* Tip */}
-        <div>
-          <Label>{t('details.tipLabel')}</Label>
-          <div className="flex flex-wrap gap-2">
-            {tipOptions.map((opt) => (
-              <Pill
-                key={opt.id}
-                active={details.tipMode === opt.id}
-                onClick={() => patchDetails({ tipMode: opt.id })}
-              >
-                {opt.label}
-              </Pill>
-            ))}
-          </div>
-          {details.tipMode === 'custom' && (
-            <div className="relative mt-3 max-w-[12rem]">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
-              <input
-                className={`${inputCls} pl-8`}
-                value={details.tipCustom}
-                onChange={(e) =>
-                  patchDetails({ tipCustom: e.target.value.replace(/[^0-9.]/g, '') })
-                }
-                placeholder={t('details.tipCustomPh')}
-                inputMode="decimal"
-              />
-            </div>
-          )}
-        </div>
-
         {/* Payment */}
         <div>
           <Label>{t('details.payment')}</Label>
@@ -190,6 +160,36 @@ export default function DetailsStep() {
                       ))}
                     </span>
                   </div>
+                </div>
+
+                {/* Tip — only when prepaying; paying at the store skips it. */}
+                <div>
+                  <Label>{t('details.tipLabel')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {tipOptions.map((opt) => (
+                      <Pill
+                        key={opt.id}
+                        active={details.tipMode === opt.id}
+                        onClick={() => patchDetails({ tipMode: opt.id })}
+                      >
+                        {opt.label}
+                      </Pill>
+                    ))}
+                  </div>
+                  {details.tipMode === 'custom' && (
+                    <div className="relative mt-3 max-w-[12rem]">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <input
+                        className={`${inputCls} pl-8`}
+                        value={details.tipCustom}
+                        onChange={(e) =>
+                          patchDetails({ tipCustom: e.target.value.replace(/[^0-9.]/g, '') })
+                        }
+                        placeholder={t('details.tipCustomPh')}
+                        inputMode="decimal"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}

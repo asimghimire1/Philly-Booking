@@ -45,8 +45,9 @@ export const translations = {
     'services.technique': 'Technique',
     'services.service': 'Service',
     'services.comboSize': 'Combo size',
+    'services.comboPick': 'Pick your services',
     'services.slot': 'Service {n}',
-    'services.slotPlaceholder': 'Choose a technique…',
+    'services.slotPlaceholder': 'Choose a service…',
     'services.addons': 'Add-ons',
     'services.addonsHint': 'optional extras, tap to include',
     'services.addonsFor': 'Optional extras for {guest}. Tap to include.',
@@ -61,7 +62,7 @@ export const translations = {
     'services.addGuest': 'Add another guest',
     'services.free': 'Free',
     'services.promo':
-      'Enjoy a one-hour massage ($80) with a complimentary fire cupping treatment during your session - upon request.',
+      'Enjoy a one-hour massage ($80) with a complimentary 5-minute fire cupping add-on during your session, upon request. (For a full treatment, book our 20-min standalone cupping.)',
     'services.pickEach': 'Pick a service for each guest to continue.',
     'common.back': 'Back',
 
@@ -222,8 +223,9 @@ export const translations = {
     'services.technique': '手法',
     'services.service': '服务',
     'services.comboSize': '套餐数量',
+    'services.comboPick': '选择您的服务',
     'services.slot': '服务 {n}',
-    'services.slotPlaceholder': '选择手法……',
+    'services.slotPlaceholder': '选择服务……',
     'services.addons': '附加项目',
     'services.addonsHint': '可选附加，点击添加',
     'services.addonsFor': '为{guest}选择可选附加项目，点击添加。',
@@ -238,7 +240,7 @@ export const translations = {
     'services.addGuest': '添加其他客人',
     'services.free': '免费',
     'services.promo':
-      '在理疗过程中享受一小时按摩（$80），并应要求免费赠送火罐疗程。',
+      '在理疗过程中享受一小时按摩（$80），并应要求免费赠送 5 分钟火罐附加体验。（如需完整疗程，请预约 20 分钟的单独火罐服务。）',
     'services.pickEach': '请为每位客人选择服务后继续。',
     'common.back': '返回',
 

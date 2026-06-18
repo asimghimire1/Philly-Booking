@@ -17,11 +17,12 @@ export const categories = [
     nameZh: '按摩',
     type: 'duration',
     techniques: [
-      { id: 'tuina', nameEn: 'Tui-Na', nameZh: '推拿', descEn: 'Deep, Chinese medical bodywork', descZh: '深层中医理疗' },
-      { id: 'swedish', nameEn: 'Swedish', nameZh: '瑞典式', descEn: 'Relaxation, full-body', descZh: '全身放松' },
-      { id: 'deep', nameEn: 'Deep Tissue', nameZh: '深层组织', descEn: 'Targets deep tension knots', descZh: '缓解深层紧张' },
-      { id: 'sports', nameEn: 'Sports', nameZh: '运动', descEn: 'Active recovery & mobility', descZh: '运动恢复与灵活度' },
-      { id: 'prenatal', nameEn: 'Prenatal', nameZh: '孕期', descEn: 'Gentle, pregnancy-safe', descZh: '温和、孕期安全' },
+      { id: 'tuina', nameEn: 'Tui-Na', nameZh: '推拿', descEn: 'Clinical Chinese bodywork for real pain relief', descZh: '专业中医推拿，有效缓解疼痛' },
+      { id: 'swedish', nameEn: 'Swedish', nameZh: '瑞典式', descEn: 'Light, flowing pressure to fully unwind', descZh: '轻柔流畅手法，彻底放松身心' },
+      { id: 'deep', nameEn: 'Deep Tissue', nameZh: '深层组织', descEn: 'Firm pressure that digs out chronic knots', descZh: '深层力度，化解慢性肌肉结节' },
+      { id: 'sports', nameEn: 'Sports', nameZh: '运动', descEn: 'Recover faster, move freer after training', descZh: '加速恢复，训练后更灵活自如' },
+      { id: 'prenatal', nameEn: 'Prenatal', nameZh: '孕期', descEn: 'Gentle, pregnancy-safe comfort & relief', descZh: '温和孕期安全，舒缓孕期不适' },
+      { id: 'scalp', nameEn: 'Scalp/Facial Massage', nameZh: '头皮/面部按摩', descEn: 'Eases tension headaches & melts mental stress', descZh: '缓解紧张性头痛，释放精神压力' },
     ],
   },
   {
@@ -40,9 +41,8 @@ export const categories = [
     nameZh: '拔罐',
     type: 'fixed',
     services: [
-      { id: 'fire', nameEn: 'Fire Cupping', nameZh: '火罐', min: 20, price: 40, descEn: 'Classic suction cupping', descZh: '经典火罐疗法' },
-      { id: 'moving', nameEn: 'Moving Cupping', nameZh: '走罐', min: 20, price: 40, descEn: 'Gliding cups along meridians', descZh: '沿经络滑动拔罐' },
-      { id: 'wet', nameEn: 'Wet Cupping', nameZh: '放血拔罐', min: 10, price: 45, descEn: 'Single acupuncture point only', descZh: '仅限单个穴位' },
+      { id: 'fire', nameEn: 'Fire Cupping', nameZh: '火罐', min: 20, price: 40, descEn: 'Deep suction to release tension', descZh: '深层吸力，释放肌肉紧张' },
+      { id: 'moving', nameEn: 'Moving Cupping', nameZh: '走罐', min: 20, price: 40, descEn: 'Gliding cups loosen wide, stiff areas', descZh: '走罐松解大面积僵硬' },
     ],
   },
   {
@@ -51,12 +51,11 @@ export const categories = [
     nameZh: '',
     type: 'fixed',
     services: [
-      { id: 'moxa', nameEn: 'Moxibustion', nameZh: '艾灸', min: 30, price: 60, descEn: 'Warming herbal heat therapy', descZh: '温热艾草疗法' },
-      { id: 'guasha', nameEn: 'Gua Sha', nameZh: '刮痧', min: 20, price: 40, descEn: 'Scraping for circulation', descZh: '促进循环刮拭' },
-      { id: 'footshape', nameEn: 'Foot Shaping', nameZh: '修脚', min: 20, price: 40, descEn: 'Pedicure therapy', descZh: '修脚护理' },
-      { id: 'ear', nameEn: 'Ear Cleansing', nameZh: '采耳', min: 20, price: 40, descEn: 'Traditional ear care', descZh: '传统采耳护理' },
-      { id: 'maternal', nameEn: 'Maternal Massage', nameZh: '产妇按摩', min: 60, price: 80, descEn: 'Prenatal & postnatal support', descZh: '产前产后护理' },
-      { id: 'thermo', nameEn: 'Thermo-Therapy', nameZh: '中药热敷', min: 45, price: 35, perPart: true, descEn: 'Hot compress, per body part', descZh: '中药热敷，按部位计费' },
+      { id: 'moxa', nameEn: 'Moxibustion', nameZh: '艾灸', min: 30, price: 60, descEn: 'Herbal heat for deep aches & cold', descZh: '艾草温热，驱寒缓解深层酸痛' },
+      { id: 'guasha', nameEn: 'Gua Sha', nameZh: '刮痧', min: 20, price: 40, descEn: 'Scraping that boosts circulation & recovery', descZh: '刮痧促进循环，加速身体恢复' },
+      { id: 'facialguasha', nameEn: 'Facial Gua Sha', nameZh: '面部刮痧', min: 20, price: 40, descEn: 'Sculpts, de-puffs & brightens your face', descZh: '面部刮痧，紧致消肿提亮肤色' },
+      { id: 'footshape', nameEn: 'Foot Shaping', nameZh: '修脚', min: 20, price: 40, descEn: 'Therapeutic reset for tired feet', descZh: '理疗修复，舒缓疲惫双足' },
+      { id: 'ear', nameEn: 'Ear Cleansing', nameZh: '采耳', min: 20, price: 40, descEn: 'Gentle, traditional ear care', descZh: '温和传统采耳护理' },
     ],
   },
 ]
@@ -76,13 +75,17 @@ export const combos = [
   { id: 'combo4', nameEn: '4-service combo', nameZh: '四项套餐', slots: 4, durationEn: '2 hours', durationZh: '2 小时', price: 160 },
 ]
 
-// Flat list of every technique/service, usable to fill combo slots.
+// Options for filling combo slots. Body-work categories collapse to a single
+// entry (one "Body Massage" / "Reflexology" rather than each technique), while
+// fixed services stay listed individually.
 export const comboOptions = categories.flatMap((cat) =>
-  (cat.type === 'duration' ? cat.techniques : cat.services).map((it) => ({
-    id: `${cat.id}:${it.id}`,
-    nameEn: it.nameEn,
-    nameZh: it.nameZh,
-  })),
+  cat.type === 'duration'
+    ? [{ id: cat.id, nameEn: cat.nameEn, nameZh: cat.nameZh }]
+    : cat.services.map((it) => ({
+        id: `${cat.id}:${it.id}`,
+        nameEn: it.nameEn,
+        nameZh: it.nameZh,
+      })),
 )
 
 // ---- lookups ----
@@ -122,7 +125,9 @@ export const addonsPrice = (sel) =>
 export const selectionTotal = (sel) => basePrice(sel) + addonsPrice(sel)
 
 // Tip amount from the chosen tip option (percent of services, custom $, or none).
-export function computeTip({ tipMode, tipCustom }, servicesSubtotal) {
+// Tips are only collected when prepaying — paying at the store means no tip now.
+export function computeTip({ tipMode, tipCustom, payment }, servicesSubtotal) {
+  if (payment === 'visit') return 0
   if (tipMode === '20') return servicesSubtotal * 0.2
   if (tipMode === '25') return servicesSubtotal * 0.25
   if (tipMode === '30') return servicesSubtotal * 0.3

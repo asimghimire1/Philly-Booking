@@ -3,6 +3,7 @@ import { useBooking } from '../context/BookingContext.jsx'
 import { useI18n } from '../i18n/LanguageContext.jsx'
 import Pill from '../components/booking/Pill.jsx'
 import SelectableCard from '../components/booking/SelectableCard.jsx'
+import Dropdown from '../components/booking/Dropdown.jsx'
 import InfoBox from '../components/booking/InfoBox.jsx'
 import BackButton from '../components/booking/BackButton.jsx'
 import {
@@ -194,24 +195,34 @@ function GuestEditor({ guest, name, avatar, primary, showHeader, showConfirm }) 
             </div>
           </div>
 
-          <div className="space-y-3">
-            {Array.from({ length: getCombo(sel.comboId)?.slots ?? 0 }).map((_, i) => (
-              <div key={i}>
-                <SectionLabel>{t('services.slot', { n: i + 1 })}</SectionLabel>
-                <select
-                  value={sel.slots[i] ?? ''}
-                  onChange={(e) => updateSlot(guest.id, i, e.target.value || null)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-navy outline-none focus:border-teal"
-                >
-                  <option value="">{t('services.slotPlaceholder')}</option>
-                  {comboOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {localName(o, lang)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
+          <div>
+            <SectionLabel>{t('services.comboPick')}</SectionLabel>
+            <div className="space-y-2.5">
+              {Array.from({ length: getCombo(sel.comboId)?.slots ?? 0 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
+                      sel.slots[i]
+                        ? 'bg-teal text-white'
+                        : 'bg-slate-100 text-slate-400'
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Dropdown
+                      value={sel.slots[i]}
+                      onChange={(v) => updateSlot(guest.id, i, v)}
+                      placeholder={t('services.slotPlaceholder')}
+                      options={comboOptions.map((o) => ({
+                        id: o.id,
+                        label: localName(o, lang),
+                      }))}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}
