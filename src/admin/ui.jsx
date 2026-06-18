@@ -1,0 +1,106 @@
+// Small presentational building blocks shared across the admin pages, styled to
+// match the brand palette (navy / teal / mint) used in the booking flow.
+
+export function Card({ children, className = '' }) {
+  return (
+    <div className={`rounded-2xl border border-slate-200 bg-white ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+export function PageHeading({ title, subtitle, action }) {
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 className="font-display text-2xl font-semibold text-navy sm:text-3xl">
+          {title}
+        </h1>
+        {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  )
+}
+
+export function StatCard({ label, value, sublabel, icon, tone = 'teal' }) {
+  const tones = {
+    teal: 'bg-teal/10 text-teal',
+    navy: 'bg-navy/10 text-navy',
+    amber: 'bg-amber-100 text-amber-600',
+    rose: 'bg-rose-100 text-rose-500',
+  }
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-slate-500">{label}</span>
+        {icon && (
+          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${tones[tone]}`}>
+            {icon}
+          </span>
+        )}
+      </div>
+      <p className="mt-3 font-display text-3xl font-bold text-navy">{value}</p>
+      {sublabel && <p className="mt-1 text-xs text-slate-400">{sublabel}</p>}
+    </Card>
+  )
+}
+
+const STATUS_STYLES = {
+  upcoming: 'bg-teal/10 text-teal',
+  completed: 'bg-emerald-100 text-emerald-600',
+  cancelled: 'bg-rose-100 text-rose-500',
+}
+
+export function StatusBadge({ status }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
+        STATUS_STYLES[status] ?? 'bg-slate-100 text-slate-500'
+      }`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {status}
+    </span>
+  )
+}
+
+export function Initials({ name, className = '' }) {
+  const text = (name || '?')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-full bg-navy text-sm font-semibold text-white ${className}`}
+    >
+      {text}
+    </span>
+  )
+}
+
+export const fieldCls =
+  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-navy outline-none transition-colors placeholder:text-slate-400 focus:border-teal'
+
+export function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-slate-600">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+// Brand date formatting, e.g. "Thu, Jun 18".
+export function fmtDate(isoStr) {
+  const [y, m, d] = isoStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+export const money = (n) => `$${Number(n || 0).toFixed(2)}`
