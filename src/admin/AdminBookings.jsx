@@ -1,64 +1,9 @@
 import { useMemo, useState } from 'react'
-import Modal from '../components/booking/Modal.jsx'
 import { useAdminData } from './data.jsx'
-import {
-  Card,
-  PageHeading,
-  StatusBadge,
-  Initials,
-  fieldCls,
-  fmtDate,
-  money,
-} from './ui.jsx'
+import BookingDetailModal from './BookingDetailModal.jsx'
+import { Card, PageHeading, StatusBadge, Initials, fieldCls, fmtDate, money } from './ui.jsx'
 
 const FILTERS = ['all', 'upcoming', 'completed', 'cancelled']
-
-function StatusActions({ booking, onSet }) {
-  const btn =
-    'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed'
-  return (
-    <div className="flex flex-wrap gap-2">
-      <button
-        type="button"
-        disabled={booking.status === 'completed'}
-        onClick={() => onSet(booking.id, 'completed')}
-        className={`${btn} ${
-          booking.status === 'completed'
-            ? 'bg-slate-100 text-slate-400'
-            : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-        }`}
-      >
-        Mark completed
-      </button>
-      {booking.status === 'cancelled' ? (
-        <button
-          type="button"
-          onClick={() => onSet(booking.id, 'upcoming')}
-          className={`${btn} bg-teal/10 text-teal hover:bg-teal/20`}
-        >
-          Reopen
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => onSet(booking.id, 'cancelled')}
-          className={`${btn} bg-rose-100 text-rose-600 hover:bg-rose-200`}
-        >
-          Cancel
-        </button>
-      )}
-    </div>
-  )
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex justify-between gap-4 text-sm">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-right font-medium text-navy">{value}</span>
-    </div>
-  )
-}
 
 export default function AdminBookings() {
   const { bookings, setBookingStatus } = useAdminData()
@@ -173,94 +118,11 @@ export default function AdminBookings() {
         </div>
       )}
 
-      {/* Detail modal */}
-      <Modal open={!!open} onClose={() => setOpenId(null)}>
-        {open && (
-          <>
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-              <div className="flex min-w-0 items-center gap-3">
-                <Initials name={open.customer.name} className="h-12 w-12" />
-                <div className="min-w-0">
-                  <h2 className="truncate font-display text-xl font-semibold text-navy">
-                    {open.customer.name}
-                  </h2>
-                  <p className="text-sm text-slate-500">
-                    {open.ref} · booked {fmtDate(open.createdAt)}
-                  </p>
-                </div>
-              </div>
-              <StatusBadge status={open.status} />
-            </div>
-
-            <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
-              <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Appointment
-                </h3>
-                <DetailRow label="Date" value={fmtDate(open.date)} />
-                <DetailRow label="Time" value={open.time} />
-                <DetailRow label="Payment" value={<span className="capitalize">{open.payment}</span>} />
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Contact
-                </h3>
-                <DetailRow label="Phone" value={open.customer.phone} />
-                <DetailRow label="Email" value={open.customer.email} />
-              </section>
-
-              <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Party ({open.party.length})
-                </h3>
-                <div className="space-y-2">
-                  {open.party.map((p, i) => (
-                    <div key={i} className="rounded-xl bg-slate-50 p-3 text-sm">
-                      <p className="font-medium text-navy">{p.name}</p>
-                      <p className="text-slate-500">{p.service}</p>
-                      <p className="mt-0.5 text-xs text-slate-400">
-                        Therapist: {p.therapist}
-                        {p.addons?.length ? ` · Add-ons: ${p.addons.join(', ')}` : ''}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {open.note && (
-                <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Note
-                  </h3>
-                  <p className="rounded-xl bg-mint p-3 text-sm text-slate-600">{open.note}</p>
-                </section>
-              )}
-
-              <section className="space-y-2 border-t border-slate-100 pt-4">
-                <DetailRow label="Services" value={money(open.servicesTotal)} />
-                <DetailRow label="Add-ons" value={money(open.addonsTotal)} />
-                <DetailRow label="Tip" value={money(open.tip)} />
-                <div className="flex justify-between pt-1 text-base font-semibold text-navy">
-                  <span>Total</span>
-                  <span>{money(total(open))}</span>
-                </div>
-              </section>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
-              <StatusActions booking={open} onSet={setBookingStatus} />
-              <button
-                type="button"
-                onClick={() => setOpenId(null)}
-                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-navy"
-              >
-                Close
-              </button>
-            </div>
-          </>
-        )}
-      </Modal>
+      <BookingDetailModal
+        booking={open}
+        onClose={() => setOpenId(null)}
+        onSetStatus={setBookingStatus}
+      />
     </div>
   )
 }

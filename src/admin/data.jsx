@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { therapists } from '../data/therapists.js'
 
 const STORE_KEY = 'paw.admin.store'
-const SCHEMA = 2 // bump to discard older seed shapes on load
+const SCHEMA = 3 // bump to discard older seed shapes on load
 
 // Days are stored Monday-first to match how the schedule reads.
 export const WEEK = [
@@ -35,7 +35,7 @@ function seed() {
       {
         id: 'b1', ref: 'PAW-1042', status: 'upcoming',
         customer: { name: 'Olivia Chen', phone: '(215) 555-0142', email: 'olivia.chen@gmail.com' },
-        date: iso(0), time: '10:30 AM',
+        date: iso(0), time: '10:30 AM', durationMin: 60,
         party: [{ name: 'Olivia Chen', service: 'Tui-Na · 1 hr', therapist: 'David Xia', addons: ['Hot Stones'] }],
         servicesTotal: 80, addonsTotal: 0, tip: 20, payment: 'prepay',
         note: 'Lower-back tension, prefers firm pressure.', createdAt: iso(-3),
@@ -43,7 +43,7 @@ function seed() {
       {
         id: 'b2', ref: 'PAW-1043', status: 'upcoming',
         customer: { name: 'Marcus Reed', phone: '(267) 555-0199', email: 'marcus.reed@outlook.com' },
-        date: iso(0), time: '3:00 PM',
+        date: iso(0), time: '3:00 PM', durationMin: 90,
         party: [
           { name: 'Marcus Reed', service: 'Deep Tissue · 1.5 hr', therapist: 'Kevin An', addons: ['Fire Cupping'] },
           { name: 'Guest 2', service: 'Foot Reflexology · 1 hr', therapist: 'No preference', addons: [] },
@@ -54,7 +54,7 @@ function seed() {
       {
         id: 'b3', ref: 'PAW-1044', status: 'upcoming',
         customer: { name: 'Priya Nair', phone: '(215) 555-0167', email: 'priya.nair@gmail.com' },
-        date: iso(1), time: '12:00 PM',
+        date: iso(1), time: '12:00 PM', durationMin: 90,
         party: [{ name: 'Priya Nair', service: '3-service combo', therapist: 'Lucy Gao', addons: [] }],
         servicesTotal: 120, addonsTotal: 0, tip: 30, payment: 'prepay',
         note: 'First visit.', createdAt: iso(-1),
@@ -62,7 +62,7 @@ function seed() {
       {
         id: 'b4', ref: 'PAW-1039', status: 'completed',
         customer: { name: 'James Whitfield', phone: '(484) 555-0121', email: 'jwhit@proton.me' },
-        date: iso(-2), time: '4:30 PM',
+        date: iso(-2), time: '4:30 PM', durationMin: 60,
         party: [{ name: 'James Whitfield', service: 'Swedish · 1 hr', therapist: 'Sally Wang', addons: ['Hot Stones'] }],
         servicesTotal: 80, addonsTotal: 0, tip: 16, payment: 'prepay',
         note: '', createdAt: iso(-6),
@@ -70,7 +70,7 @@ function seed() {
       {
         id: 'b5', ref: 'PAW-1041', status: 'cancelled',
         customer: { name: 'Dana Lopez', phone: '(215) 555-0188', email: 'dana.lopez@gmail.com' },
-        date: iso(-1), time: '6:00 PM',
+        date: iso(-1), time: '6:00 PM', durationMin: 30,
         party: [{ name: 'Dana Lopez', service: 'Gua Sha · 20 min', therapist: 'Yo-Yo Liu', addons: [] }],
         servicesTotal: 40, addonsTotal: 0, tip: 0, payment: 'visit',
         note: 'Cancelled by customer.', createdAt: iso(-4),
@@ -78,7 +78,7 @@ function seed() {
       {
         id: 'b6', ref: 'PAW-1045', status: 'upcoming',
         customer: { name: 'Sophie Müller', phone: '(267) 555-0150', email: 'sophie.m@gmail.com' },
-        date: iso(3), time: '1:30 PM',
+        date: iso(3), time: '1:30 PM', durationMin: 60,
         party: [{ name: 'Sophie Müller', service: 'Prenatal · 1 hr', therapist: 'Female therapist', addons: [] }],
         servicesTotal: 80, addonsTotal: 0, tip: 20, payment: 'prepay',
         note: '2nd trimester — pregnancy-safe only.', createdAt: iso(0),
