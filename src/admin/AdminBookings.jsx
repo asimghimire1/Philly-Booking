@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAdminData } from './data.jsx'
 import BookingDetailModal from './BookingDetailModal.jsx'
-import { Card, PageHeading, StatusBadge, Initials, fieldCls, fmtDate, money } from './ui.jsx'
+import { Card, PageHeading, StatusBadge, PaymentBadge, Initials, fieldCls, fmtDate, money } from './ui.jsx'
 
 const FILTERS = ['all', 'upcoming', 'completed', 'cancelled']
 
@@ -97,9 +97,11 @@ export default function AdminBookings() {
                     {b.party.length > 1 ? `${b.party.length} guests` : b.party[0].service}
                   </p>
                 </div>
-                <div className="hidden text-right sm:block">
+                <div className="hidden text-right sm:flex sm:flex-col sm:items-end">
                   <p className="font-semibold text-navy">{money(total(b))}</p>
-                  <p className="text-xs capitalize text-slate-400">{b.payment}</p>
+                  <span className="mt-1">
+                    <PaymentBadge payment={b.payment} />
+                  </span>
                 </div>
                 <StatusBadge status={b.status} />
                 <button

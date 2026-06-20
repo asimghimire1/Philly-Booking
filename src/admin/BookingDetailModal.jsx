@@ -1,5 +1,5 @@
 import Modal from '../components/booking/Modal.jsx'
-import { StatusBadge, Initials, fmtDate, money } from './ui.jsx'
+import { StatusBadge, PaymentBadge, Initials, fmtDate, money } from './ui.jsx'
 
 const total = (b) => b.servicesTotal + b.addonsTotal + b.tip
 
@@ -78,7 +78,7 @@ export default function BookingDetailModal({ booking, onClose, onSetStatus }) {
               </h3>
               <DetailRow label="Date" value={fmtDate(booking.date)} />
               <DetailRow label="Time" value={booking.time} />
-              <DetailRow label="Payment" value={<span className="capitalize">{booking.payment}</span>} />
+              <DetailRow label="Payment" value={<PaymentBadge payment={booking.payment} />} />
             </section>
 
             <section className="space-y-2">

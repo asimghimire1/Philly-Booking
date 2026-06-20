@@ -65,6 +65,32 @@ export function StatusBadge({ status }) {
   )
 }
 
+// Distinct, human-readable payment status as the practice sees it.
+export const paymentLabel = (p) =>
+  p === 'prepay' ? 'Paid in advance' : p === 'visit' ? 'Pay in store' : p
+
+export function PaymentBadge({ payment }) {
+  const prepaid = payment === 'prepay'
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+        prepaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+      }`}
+    >
+      {prepaid ? (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+          <path d="M9 12l2 2 4-4M12 21a9 9 0 100-18 9 9 0 000 18z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+          <path d="M5 9l1-4h12l1 4M5 9v9a1 1 0 001 1h12a1 1 0 001-1V9M5 9h14M9 19v-5h6v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {paymentLabel(payment)}
+    </span>
+  )
+}
+
 export function Initials({ name, className = '' }) {
   const text = (name || '?')
     .split(/\s+/)
