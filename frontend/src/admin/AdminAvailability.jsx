@@ -25,8 +25,8 @@ function Toggle({ on, onChange }) {
 export default function AdminAvailability() {
   const { availability, loading, setDayOpen, setDayHours, addClosure, removeClosure } = useAdminData()
 
-  // Don't render until hours data has loaded from the backend
-  if (loading || Object.keys(availability.hours).length === 0) {
+  // Don't render until initial data fetch is complete
+  if (loading) {
     return (
       <div className="animate-step flex items-center justify-center py-24 text-slate-400 text-sm">
         Loading availability…
@@ -55,6 +55,7 @@ export default function AdminAvailability() {
         <Card className="divide-y divide-slate-100 p-2">
           {WEEK.map(({ key, label }) => {
             const day = availability.hours[key]
+            if (!day) return null
             return (
               <div key={key} className="flex flex-wrap items-center gap-3 px-3 py-3.5">
                 <div className="flex w-40 shrink-0 items-center gap-3">
