@@ -23,7 +23,16 @@ function Toggle({ on, onChange }) {
 }
 
 export default function AdminAvailability() {
-  const { availability, setDayOpen, setDayHours, addClosure, removeClosure } = useAdminData()
+  const { availability, loading, setDayOpen, setDayHours, addClosure, removeClosure } = useAdminData()
+
+  // Don't render until hours data has loaded from the backend
+  if (loading || Object.keys(availability.hours).length === 0) {
+    return (
+      <div className="animate-step flex items-center justify-center py-24 text-slate-400 text-sm">
+        Loading availability…
+      </div>
+    )
+  }
 
   return (
     <div className="animate-step">
