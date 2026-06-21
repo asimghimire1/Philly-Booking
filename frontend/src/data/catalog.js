@@ -2,10 +2,10 @@
 // Names are bilingual (always shown EN + 中文); descriptions switch with language.
 
 export const durations = [
-  { id: '30m', pill: '30 min', labelEn: '30 min', labelZh: '30 分钟', short: '30 min', price: 50 },
-  { id: '1h', pill: '1 hour', labelEn: '1 hour', labelZh: '1 小时', short: '1 hr', price: 80 },
-  { id: '90m', pill: '1.5 hr', labelEn: '1.5 hr', labelZh: '1.5 小时', short: '1.5 hr', price: 120 },
-  { id: '2h', pill: '2 hr', labelEn: '2 hours', labelZh: '2 小时', short: '2 hr', price: 160 },
+  { id: '30m', pill: '30 min', labelEn: '30 min', labelZh: '30 分钟', short: '30 min', minutes: 30, price: 50 },
+  { id: '1h', pill: '1 hour', labelEn: '1 hour', labelZh: '1 小时', short: '1 hr', minutes: 60, price: 80 },
+  { id: '90m', pill: '1.5 hr', labelEn: '1.5 hr', labelZh: '1.5 小时', short: '1.5 hr', minutes: 90, price: 120 },
+  { id: '2h', pill: '2 hr', labelEn: '2 hours', labelZh: '2 小时', short: '2 hr', minutes: 120, price: 160 },
 ]
 
 // type: 'duration' → pick a duration tier + a technique (price from tier)
@@ -70,9 +70,9 @@ export const addons = [
 
 // Combo packages — fill each slot with any technique (brief §4d).
 export const combos = [
-  { id: 'combo2', nameEn: '2-service combo', nameZh: '双项套餐', slots: 2, durationEn: '1 hour', durationZh: '1 小时', price: 80 },
-  { id: 'combo3', nameEn: '3-service combo', nameZh: '三项套餐', slots: 3, durationEn: '1.5 hr', durationZh: '1.5 小时', price: 120 },
-  { id: 'combo4', nameEn: '4-service combo', nameZh: '四项套餐', slots: 4, durationEn: '2 hours', durationZh: '2 小时', price: 160 },
+  { id: 'combo2', nameEn: '2-service combo', nameZh: '双项套餐', slots: 2, durationEn: '1 hour', durationZh: '1 小时', minutes: 60, price: 80 },
+  { id: 'combo3', nameEn: '3-service combo', nameZh: '三项套餐', slots: 3, durationEn: '1.5 hr', durationZh: '1.5 小时', minutes: 90, price: 120 },
+  { id: 'combo4', nameEn: '4-service combo', nameZh: '四项套餐', slots: 4, durationEn: '2 hours', durationZh: '2 小时', minutes: 120, price: 160 },
 ]
 
 // Options for filling combo slots. Body-work categories collapse to a single
@@ -123,6 +123,16 @@ export const addonsPrice = (sel) =>
   (sel?.addonIds ?? []).reduce((sum, id) => sum + (getAddon(id)?.price ?? 0), 0)
 
 export const selectionTotal = (sel) => basePrice(sel) + addonsPrice(sel)
+
+// How long the appointment runs, in minutes — drives the time-slot spacing.
+export function selectionMinutes(sel) {
+  if (!sel) return 60
+  if (sel.mode === 'combo') return getCombo(sel.comboId)?.minutes ?? 60
+  const cat = getCategory(sel.categoryId)
+  if (!cat) return 60
+  if (cat.type === 'duration') return getDuration(sel.durationId)?.minutes ?? 60
+  return getItem(sel.categoryId, sel.pickId)?.min ?? 30
+}
 
 // Tip amount from the chosen tip option (percent of services, custom $, or none).
 // Tips are only collected when prepaying — paying at the store means no tip now.

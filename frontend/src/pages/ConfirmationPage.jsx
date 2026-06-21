@@ -44,7 +44,8 @@ function Row({ label, value, muted }) {
 }
 
 export default function ConfirmationPage() {
-  const { guests, dateTime, details, completed } = useBooking()
+  const { guests, dateTime, details, completed, bookingRef } = useBooking()
+
   const { t, lang } = useI18n()
   const locale = lang === 'zh' ? 'zh-CN' : 'en-US'
 
@@ -113,6 +114,11 @@ export default function ConfirmationPage() {
                   {t('confirm.title')}
                 </h1>
                 <p className="mt-1 text-slate-500">{t('confirm.subtitle')}</p>
+                {bookingRef && (
+                  <p className="mt-1 text-sm text-slate-500">
+                    Confirmation #{bookingRef}
+                  </p>
+                )}
               </div>
             </div>
 

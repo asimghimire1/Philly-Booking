@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import Modal from '../components/booking/Modal.jsx'
 import { useAdminData } from './data.jsx'
 import BookingDetailModal from './BookingDetailModal.jsx'
-import { Card, PageHeading } from './ui.jsx'
+import { Card, PageHeading, StatusBadge } from './ui.jsx'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const DOW_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
@@ -96,6 +97,75 @@ function Block({ status, style, time, title, sub, strike, onClick }) {
   )
 }
 
+// Group appointments whose times overlap into clusters, so stacked blocks
+// (which are unreadable) collapse into a single count block.
+function clusterOverlaps(items) {
+  const sorted = [...items].sort((a, b) => a.start - b.start)
+  const clusters = []
+  let cur = null
+  for (const it of sorted) {
+    if (!cur || it.start >= cur.end) {
+      cur = { start: it.start, end: it.start + it.dur, items: [it] }
+      clusters.push(cur)
+    } else {
+      cur.items.push(it)
+      cur.end = Math.max(cur.end, it.start + it.dur)
+    }
+  }
+  return clusters
+}
+
+// Shown in place of overlapping blocks: a navy block with the count.
+function GroupBlock({ count, time, style, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={style}
+      className="absolute inset-x-1 flex flex-col overflow-hidden rounded-lg bg-navy px-2 py-1 text-left text-white shadow-md ring-1 ring-black/10 transition-colors hover:bg-navy-600"
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="truncate text-[10px] text-white/80">{time}</span>
+        <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-navy">
+          {count}
+        </span>
+      </div>
+      <span className="truncate text-xs font-semibold leading-tight">{count} bookings</span>
+      <span className="truncate text-[10px] text-white/80">Tap to view all</span>
+    </button>
+  )
+}
+
+// Renders one column's appointments, collapsing overlaps into a count block.
+function ColumnBlocks({ items, startHour, endHour, onOpen, onGroup }) {
+  return clusterOverlaps(items).map((c, i) => {
+    if (c.items.length === 1) {
+      const it = c.items[0]
+      return (
+        <Block
+          key={it.id}
+          status={it.status}
+          strike={it.status === 'cancelled'}
+          style={blockStyle(it.start, it.dur, startHour, endHour)}
+          time={fmtMin(it.start)}
+          title={it.title}
+          sub={it.sub}
+          onClick={() => onOpen(it.bookingId)}
+        />
+      )
+    }
+    return (
+      <GroupBlock
+        key={`g${i}`}
+        count={c.items.length}
+        time={fmtMin(c.start)}
+        style={blockStyle(c.start, c.end - c.start, startHour, endHour)}
+        onClick={() => onGroup(c.items)}
+      />
+    )
+  })
+}
+
 function HourLines({ hours, startHour }) {
   return hours.map((h) => (
     <div
@@ -123,7 +193,7 @@ function TimeGutter({ hours, startHour, bodyH }) {
 }
 
 // ── Week view (7 day columns) ───────────────────────────────────────────────
-function WeekView({ bookings, weekStart, onOpen }) {
+function WeekView({ bookings, weekStart, onOpen, onGroup }) {
   const START = 8
   const END = 21
   const hours = [...Array(END - START)].map((_, i) => START + i)
@@ -160,23 +230,23 @@ function WeekView({ bookings, weekStart, onOpen }) {
         <div className="grid" style={{ gridTemplateColumns: cols }}>
           <TimeGutter hours={hours} startHour={START} bodyH={bodyH} />
           {days.map((d, di) => {
-            const list = byDate[toIso(d)] ?? []
+            const items = (byDate[toIso(d)] ?? []).map((b) => ({
+              id: b.id,
+              bookingId: b.id,
+              status: b.status,
+              title: b.customer.name,
+              sub:
+                b.party.length > 1
+                  ? `${b.party.length} guests`
+                  : `${b.party[0].service} · ${b.party[0].therapist}`,
+              start: parseTime(b.time),
+              dur: b.durationMin || 60,
+            }))
             const isToday = toIso(d) === todayIso
             return (
               <div key={di} className={`relative border-l border-slate-200 ${isToday ? 'bg-teal/[0.03]' : ''}`} style={{ height: bodyH }}>
                 <HourLines hours={hours} startHour={START} />
-                {list.map((b) => (
-                  <Block
-                    key={b.id}
-                    status={b.status}
-                    strike={b.status === 'cancelled'}
-                    style={blockStyle(parseTime(b.time), b.durationMin, START, END)}
-                    time={fmtMin(parseTime(b.time))}
-                    title={b.customer.name}
-                    sub={b.party.length > 1 ? `${b.party.length} guests` : b.party[0].service}
-                    onClick={() => onOpen(b.id)}
-                  />
-                ))}
+                <ColumnBlocks items={items} startHour={START} endHour={END} onOpen={onOpen} onGroup={onGroup} />
               </div>
             )
           })}
@@ -187,7 +257,7 @@ function WeekView({ bookings, weekStart, onOpen }) {
 }
 
 // ── Day view (one column per staff) ─────────────────────────────────────────
-function DayView({ bookings, staff, availability, dayDate, onOpen }) {
+function DayView({ bookings, staff, availability, dayDate, onOpen, onGroup }) {
   const key = DOW_KEYS[dayDate.getDay()]
   const cfg = availability.hours[key]
   const isOpen = cfg?.open
@@ -251,25 +321,177 @@ function DayView({ bookings, staff, availability, dayDate, onOpen }) {
         {/* Time grid */}
         <div className="grid" style={{ gridTemplateColumns: cols }}>
           <TimeGutter hours={hours} startHour={startHour} bodyH={bodyH} />
-          {columns.map((c) => (
-            <div key={c.id} className="relative border-l border-slate-200" style={{ height: bodyH }}>
-              <HourLines hours={hours} startHour={startHour} />
-              {apptsFor(c).map((a) => (
-                <Block
-                  key={a.key}
-                  status={a.booking.status}
-                  strike={a.booking.status === 'cancelled'}
-                  style={blockStyle(parseTime(a.booking.time), a.booking.durationMin, startHour, endHour)}
-                  time={fmtMin(parseTime(a.booking.time))}
-                  title={a.guest.name}
-                  sub={a.guest.service}
-                  onClick={() => onOpen(a.booking.id)}
-                />
-              ))}
-            </div>
-          ))}
+          {columns.map((c) => {
+            const items = apptsFor(c).map((a) => ({
+              id: a.key,
+              bookingId: a.booking.id,
+              status: a.booking.status,
+              title: a.guest.name,
+              sub: a.guest.service,
+              start: parseTime(a.booking.time),
+              dur: a.booking.durationMin || 60,
+            }))
+            return (
+              <div key={c.id} className="relative border-l border-slate-200" style={{ height: bodyH }}>
+                <HourLines hours={hours} startHour={startHour} />
+                <ColumnBlocks items={items} startHour={startHour} endHour={endHour} onOpen={onOpen} onGroup={onGroup} />
+              </div>
+            )
+          })}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Mobile agenda (day-grouped list) ────────────────────────────────────────
+const timeRange = (startMin, durationMin) =>
+  `${fmtMin(startMin)} - ${fmtMin(startMin + (durationMin || 60))}`
+
+const cardTone = (status) =>
+  status === 'cancelled' ? 'bg-rose-400' : status === 'completed' ? 'bg-emerald-600' : 'bg-teal'
+
+function AgendaCard({ status, title, sub, start, durationMin, onClick }) {
+  const badge =
+    status === 'cancelled' ? 'Cancelled' : status === 'completed' ? 'Completed' : null
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full flex-col gap-1 rounded-2xl p-4 text-left text-white shadow-sm transition active:scale-[0.99] ${cardTone(status)}`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-white/90">{timeRange(start, durationMin)}</span>
+        {badge && (
+          <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold">
+            {badge}
+          </span>
+        )}
+      </div>
+      <span
+        className={`text-base font-semibold leading-snug ${status === 'cancelled' ? 'line-through decoration-white/60' : ''}`}
+      >
+        {title}
+      </span>
+      {sub && <span className="text-sm text-white/85">{sub}</span>}
+    </button>
+  )
+}
+
+function AgendaSection({ title, meta, children }) {
+  return (
+    <section className="mt-6 first:mt-0">
+      <div className="mb-2.5 flex items-baseline justify-between gap-2">
+        <h3 className="font-display text-lg font-semibold text-navy">{title}</h3>
+        {meta && <span className="text-sm font-medium text-slate-400">{meta}</span>}
+      </div>
+      <div className="space-y-2.5">{children}</div>
+    </section>
+  )
+}
+
+function EmptyAgenda({ text }) {
+  return <Card className="p-10 text-center text-sm text-slate-400">{text}</Card>
+}
+
+function WeekAgenda({ bookings, weekStart, onOpen }) {
+  const days = [...Array(7)].map((_, i) => addDays(weekStart, i))
+  const byDate = {}
+  for (const b of bookings) {
+    if (parseTime(b.time) == null) continue
+    ;(byDate[b.date] ??= []).push(b)
+  }
+  const todayIso = toIso(new Date())
+  const sections = days
+    .map((d, i) => ({
+      d,
+      i,
+      list: (byDate[toIso(d)] ?? []).sort((a, b) => parseTime(a.time) - parseTime(b.time)),
+    }))
+    .filter((s) => s.list.length)
+
+  if (!sections.length) return <EmptyAgenda text="No appointments this week." />
+
+  return (
+    <div>
+      {sections.map(({ d, i, list }) => (
+        <AgendaSection
+          key={i}
+          title={DAY_NAMES[i]}
+          meta={
+            toIso(d) === todayIso
+              ? 'Today'
+              : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          }
+        >
+          {list.map((b) => (
+            <AgendaCard
+              key={b.id}
+              status={b.status}
+              title={b.customer.name}
+              sub={
+                b.party.length > 1
+                  ? `${b.party.length} guests`
+                  : `${b.party[0].service} · ${b.party[0].therapist}`
+              }
+              start={parseTime(b.time)}
+              durationMin={b.durationMin}
+              onClick={() => onOpen(b.id)}
+            />
+          ))}
+        </AgendaSection>
+      ))}
+    </div>
+  )
+}
+
+function DayAgenda({ bookings, staff, dayDate, onOpen }) {
+  const dayIso = toIso(dayDate)
+  const appts = []
+  for (const b of bookings) {
+    if (b.date !== dayIso || parseTime(b.time) == null) continue
+    b.party.forEach((p, i) => appts.push({ booking: b, guest: p, key: `${b.id}-${i}` }))
+  }
+  const activeStaff = staff.filter((s) => s.active)
+  const staffNames = new Set(activeStaff.map((s) => s.name))
+  const cols = [
+    ...activeStaff.map((s) => ({ id: s.id, name: s.name, unassigned: false })),
+    { id: 'unassigned', name: 'Unassigned', unassigned: true },
+  ]
+  const groups = cols
+    .map((c) => ({
+      c,
+      items: appts
+        .filter((a) =>
+          c.unassigned ? !staffNames.has(a.guest.therapist) : a.guest.therapist === c.name,
+        )
+        .sort((a, b) => parseTime(a.booking.time) - parseTime(b.booking.time)),
+    }))
+    .filter((g) => g.items.length)
+
+  if (!groups.length) return <EmptyAgenda text="No appointments this day." />
+
+  return (
+    <div>
+      {groups.map(({ c, items }) => (
+        <AgendaSection key={c.id} title={c.name} meta={`${items.length} appt${items.length > 1 ? 's' : ''}`}>
+          {items.map((a) => (
+            <AgendaCard
+              key={a.key}
+              status={a.booking.status}
+              title={a.guest.name}
+              sub={
+                a.guest.name === a.booking.customer.name
+                  ? a.guest.service
+                  : `${a.guest.service} · ${a.booking.customer.name}`
+              }
+              start={parseTime(a.booking.time)}
+              durationMin={a.booking.durationMin}
+              onClick={() => onOpen(a.booking.id)}
+            />
+          ))}
+        </AgendaSection>
+      ))}
     </div>
   )
 }
@@ -287,12 +509,67 @@ function NavBtn({ onClick, label, children }) {
   )
 }
 
+// Lists the appointments behind an overlap-count block; tap one for full detail.
+function OverlapModal({ items, onClose, onPick }) {
+  return (
+    <Modal open={!!items} onClose={onClose}>
+      {items && (
+        <>
+          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+            <div>
+              <h2 className="font-display text-xl font-semibold text-navy">
+                {items.length} overlapping appointments
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">Tap one to see full details.</p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-navy"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 space-y-2 overflow-y-auto px-6 py-5">
+            {[...items]
+              .sort((a, b) => a.start - b.start)
+              .map((it) => (
+                <button
+                  key={it.id}
+                  type="button"
+                  onClick={() => onPick(it.bookingId)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition-colors hover:border-teal hover:bg-mint/40"
+                >
+                  <span className={`h-10 w-1.5 shrink-0 rounded-full ${cardTone(it.status)}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-navy">{it.title}</p>
+                    <p className="truncate text-sm text-slate-500">
+                      {timeRange(it.start, it.dur)} · {it.sub}
+                    </p>
+                  </div>
+                  <StatusBadge status={it.status} />
+                  <svg className="h-5 w-5 shrink-0 text-slate-300" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              ))}
+          </div>
+        </>
+      )}
+    </Modal>
+  )
+}
+
 export default function AdminCalendar() {
   const { bookings, staff, availability, setBookingStatus } = useAdminData()
   const [view, setView] = useState('week')
   const [weekStart, setWeekStart] = useState(() => weekSunday(new Date()))
   const [dayDate, setDayDate] = useState(startOfToday)
   const [openId, setOpenId] = useState(null)
+  const [overlap, setOverlap] = useState(null) // items behind a tapped count block
   const open = bookings.find((b) => b.id === openId)
 
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i))
@@ -367,9 +644,15 @@ export default function AdminCalendar() {
         )}
       </div>
 
-      <Card className="overflow-hidden">
+      {/* Desktop: time-grid. */}
+      <Card className="hidden overflow-hidden lg:block">
         {view === 'week' ? (
-          <WeekView bookings={bookings} weekStart={weekStart} onOpen={setOpenId} />
+          <WeekView
+            bookings={bookings}
+            weekStart={weekStart}
+            onOpen={setOpenId}
+            onGroup={setOverlap}
+          />
         ) : (
           <DayView
             bookings={bookings}
@@ -377,13 +660,32 @@ export default function AdminCalendar() {
             availability={availability}
             dayDate={dayDate}
             onOpen={setOpenId}
+            onGroup={setOverlap}
           />
         )}
       </Card>
 
-      <p className="mt-3 text-center text-xs text-slate-400">
+      {/* Mobile: day/staff-grouped agenda list. */}
+      <div className="lg:hidden">
+        {view === 'week' ? (
+          <WeekAgenda bookings={bookings} weekStart={weekStart} onOpen={setOpenId} />
+        ) : (
+          <DayAgenda bookings={bookings} staff={staff} dayDate={dayDate} onOpen={setOpenId} />
+        )}
+      </div>
+
+      <p className="mt-3 hidden text-center text-xs text-slate-400 lg:block">
         Tap an appointment to view full details.
       </p>
+
+      <OverlapModal
+        items={overlap}
+        onClose={() => setOverlap(null)}
+        onPick={(id) => {
+          setOverlap(null)
+          setOpenId(id)
+        }}
+      />
 
       <BookingDetailModal
         booking={open}

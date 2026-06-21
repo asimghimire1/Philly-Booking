@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import { getCombo } from '../data/catalog.js'
 import { getTherapist } from '../data/therapists.js'
+import { submitBooking } from '../services/bookingService.js'
 
 // Default therapist preference: the roster is shown ("pick by name") so guests
 // can choose, but nobody is pre-selected.
@@ -168,8 +169,25 @@ export function BookingProvider({ children }) {
   // ---- flow progress (URL can go back, not skip ahead) ----
   const [maxStep, setMaxStep] = useState(1)
   const unlockStep = (n) => setMaxStep((m) => Math.max(m, n))
+
   const [completed, setCompleted] = useState(false)
-  const completeBooking = () => setCompleted(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
+  const [bookingRef, setBookingRef] = useState(null)
+
+  const completeBooking = async () => {
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      const saved = await submitBooking({ guests, dateTime, details })
+      setBookingRef(saved.ref)
+      setCompleted(true)
+    } catch (err) {
+      setSubmitError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const allConfirmed = guests.every((g) => g.confirmed)
 
@@ -200,9 +218,12 @@ export function BookingProvider({ children }) {
       unlockStep,
       completed,
       completeBooking,
+      submitting,
+      submitError,
+      bookingRef,
       allConfirmed,
     }),
-    [guests, activeId, nextId, dateTime, details, maxStep, completed, allConfirmed],
+  [guests, activeId, nextId, dateTime, details, maxStep, completed, allConfirmed, submitting, submitError, bookingRef],
   )
 
   return (

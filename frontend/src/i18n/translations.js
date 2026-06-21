@@ -89,6 +89,7 @@ export const translations = {
       'Your whole party will be seen together - only slots that work for everyone are shown.',
     'datetime.selectDate': 'Select date',
     'datetime.availableTimes': 'Available times',
+    'datetime.slotHint': '{dur} sessions',
     'datetime.info':
       'Times reflect therapist availability plus a short prep buffer between sessions.',
     'datetime.pickTime': 'Pick a time to continue.',
@@ -265,6 +266,7 @@ export const translations = {
     'datetime.leadMulti': '您的同行人将一同接受理疗-仅显示适合所有人的时段。',
     'datetime.selectDate': '选择日期',
     'datetime.availableTimes': '可预约时段',
+    'datetime.slotHint': '{dur} 时段',
     'datetime.info': '时段已考虑理疗师的空档以及理疗之间的准备时间。',
     'datetime.pickTime': '请选择一个时段后继续。',
     'summary.servicesAddons': '服务 + 附加',

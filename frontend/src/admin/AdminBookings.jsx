@@ -94,7 +94,7 @@ export default function AdminBookings() {
                   </div>
                   <p className="truncate text-sm text-slate-500">
                     {fmtDate(b.date)} · {b.time} ·{' '}
-                    {b.party.length > 1 ? `${b.party.length} guests` : b.party[0].service}
+                    {b.party.length > 1 ? `${b.party.length} guests` : b.party[0]?.service || 'No service'}
                   </p>
                 </div>
                 <div className="hidden text-right sm:flex sm:flex-col sm:items-end">

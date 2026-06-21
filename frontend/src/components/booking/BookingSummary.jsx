@@ -30,7 +30,7 @@ function Row({ label, value, muted, valueClass = '' }) {
 }
 
 export default function BookingSummary() {
-  const { guests, allConfirmed, dateTime, details, unlockStep, completeBooking } =
+  const { guests, allConfirmed, dateTime, details, unlockStep, completeBooking, submitting, submitError } =
     useBooking()
   const { t, lang } = useI18n()
   const navigate = useNavigate()
@@ -96,13 +96,13 @@ export default function BookingSummary() {
             ? t('details.finalReview')
             : t('summary.disclaimer')
 
-  const onContinue = () => {
+  const onContinue = async () => {
     if (target) {
       unlockStep(currentStep + 1) // allow forward navigation to the next step
       navigate(target)
     } else {
-      completeBooking() // unlock the confirmation page
-      navigate('/confirmation')
+      await completeBooking() // now actually saves to Supabase
+      navigate('/confirmation') // only navigates after the save attempt finishes
     }
   }
 
@@ -211,7 +211,7 @@ export default function BookingSummary() {
 
       <button
         type="button"
-        disabled={!canContinue}
+        disabled={!canContinue || submitting}
         onClick={onContinue}
         className={`group mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3.5 font-semibold text-white shadow-md transition-all duration-200 ${
           canContinue
@@ -230,6 +230,10 @@ export default function BookingSummary() {
           />
         </svg>
       </button>
+
+      {submitError && (
+        <p className="mt-3 text-sm text-red-600">{submitError}</p>
+      )}
 
       <p className="mt-3 text-center text-xs text-slate-500">{footerText}</p>
     </div>

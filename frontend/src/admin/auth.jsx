@@ -1,33 +1,21 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { ADMIN_USERS } from './config.js'
 
 const SESSION_KEY = 'paw.admin.session'
 
-// ── SWAP SEAM ───────────────────────────────────────────────────────────────
-// This is the ONLY function to replace when a backend / auth provider exists.
-// It must take an email + password and resolve to a user object, or throw on
-// failure. Everything else in the app (session handling, route guards, the
-// login screen, the dashboard) stays exactly the same.
-//
-//   Supabase example:
-//     const { data, error } =
-//       await supabase.auth.signInWithPassword({ email, password })
-//     if (error) throw new Error(error.message)
-//     return { email: data.user.email, name: data.user.user_metadata.name }
-//
-// Until then, this checks the placeholder credentials in config.js.
+import { supabase } from '../lib/supabaseClient.js'
+
 async function signInAdapter(email, password) {
-  await new Promise((r) => setTimeout(r, 450)) // mimic a network round-trip
-  const match = ADMIN_USERS.find(
-    (u) =>
-      u.email.toLowerCase() === email.trim().toLowerCase() &&
-      u.password === password,
-  )
-  if (!match) throw new Error('Invalid email or password.')
-  return { email: match.email, name: match.name }
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  })
+  if (error) throw new Error('Invalid email or password.')
+  return {
+    email: data.user.email,
+    name: data.user.user_metadata?.name || 'Admin',
+  }
 }
-// ──────────────────────────────────────────────────────────────────────────────
 
 const AdminAuthContext = createContext(null)
 
@@ -54,7 +42,8 @@ export function AdminAuthProvider({ children }) {
     }
   }, [])
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut()
     sessionStorage.removeItem(SESSION_KEY)
     setUser(null)
   }, [])
