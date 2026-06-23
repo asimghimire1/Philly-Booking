@@ -14,6 +14,7 @@ import AdminLayout from './admin/AdminLayout.jsx'
 import AdminOverview from './admin/AdminOverview.jsx'
 import AdminCalendar from './admin/AdminCalendar.jsx'
 import AdminBookings from './admin/AdminBookings.jsx'
+import AdminBookingEdit from './admin/AdminBookingEdit.jsx'
 import AdminAvailability from './admin/AdminAvailability.jsx'
 import AdminStaff from './admin/AdminStaff.jsx'
 
@@ -58,6 +59,7 @@ export default function App() {
           <Route index element={<AdminOverview />} />
           <Route path="calendar" element={<AdminCalendar />} />
           <Route path="bookings" element={<AdminBookings />} />
+          <Route path="bookings/:id/edit" element={<AdminBookingEdit />} />
           <Route path="availability" element={<AdminAvailability />} />
           <Route path="staff" element={<AdminStaff />} />
         </Route>

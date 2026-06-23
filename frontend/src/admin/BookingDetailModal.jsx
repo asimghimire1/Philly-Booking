@@ -51,7 +51,7 @@ function DetailRow({ label, value }) {
 }
 
 // The full booking detail dialog, shared by the Bookings list and the Calendar.
-export default function BookingDetailModal({ booking, onClose, onSetStatus }) {
+export default function BookingDetailModal({ booking, onClose, onSetStatus, onEdit }) {
   return (
     <Modal open={!!booking} onClose={onClose}>
       {booking && (
@@ -129,13 +129,24 @@ export default function BookingDetailModal({ booking, onClose, onSetStatus }) {
 
           <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
             <StatusActions booking={booking} onSet={onSetStatus} />
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-navy"
-            >
-              Close
-            </button>
+            <div className="flex items-center gap-2">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(booking.id)}
+                  className="rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-600"
+                >
+                  Edit
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-navy"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </>
       )}

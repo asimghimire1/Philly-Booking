@@ -3,9 +3,19 @@ const { supabase } = require('../lib/supabaseClient');
 
 const router = express.Router();
 
+// Parse "10:00 AM" → minutes from midnight
+function parseAmPm(str) {
+  if (!str) return null;
+  const [time, ap] = str.trim().split(' ');
+  const [h, m] = time.split(':').map(Number);
+  return ((h % 12) + (ap === 'PM' ? 12 : 0)) * 60 + m;
+}
+
 // ── AVAILABILITY ──────────────────────────────────────────────────────────
 
-async function getAvailabilityData(date, durationMin, gender = null) {
+async function getAvailabilityData(date, durationMin, gender = null, options = {}) {
+  const excludeBookingIds = options.excludeBookingIds || [];
+  const excludeSet = new Set(excludeBookingIds);
   // Convert date string → day-of-week key (sun/mon/…)
   const d = new Date(date + 'T12:00:00'); // noon avoids DST edge cases
   const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -53,20 +63,14 @@ async function getAvailabilityData(date, durationMin, gender = null) {
   }
 
   // Fetch all non-cancelled bookings for this date
-  const { data: bookings, error: bErr } = await supabase
+  const { data: bookingsRaw, error: bErr } = await supabase
     .from('bookings')
-    .select('booking_time, duration_min, therapist_id')
+    .select('id, booking_time, duration_min, therapist_id')
     .eq('booking_date', date)
     .neq('status', 'cancelled');
   if (bErr) throw bErr;
 
-  // Parse "10:00 AM" → minutes from midnight
-  const parseAmPm = (str) => {
-    if (!str) return null;
-    const [time, ap] = str.trim().split(' ');
-    const [h, m] = time.split(':').map(Number);
-    return ((h % 12) + (ap === 'PM' ? 12 : 0)) * 60 + m;
-  };
+  const bookings = (bookingsRaw || []).filter((b) => !excludeSet.has(b.id));
 
   // Build per-therapist blocked windows from existing bookings
   let activeStaff = staffRes.data || [];
@@ -76,7 +80,7 @@ async function getAvailabilityData(date, durationMin, gender = null) {
   const allTherapistIds = activeStaff.map((s) => s.id);
   const therapistBlocked = Object.fromEntries(allTherapistIds.map((id) => [id, []]));
 
-  for (const b of bookings || []) {
+  for (const b of bookings) {
     if (!b.therapist_id || !therapistBlocked[b.therapist_id]) continue;
     const startMin = parseAmPm(b.booking_time);
     if (startMin === null) continue;
@@ -107,7 +111,7 @@ async function getAvailabilityData(date, durationMin, gender = null) {
 
     // Subtract generic bookings (no preference) from freeCount
     let genericOverlap = 0;
-    for (const b of bookings || []) {
+    for (const b of bookings) {
       if (!b.therapist_id) {
         const startMin = parseAmPm(b.booking_time);
         if (startMin !== null) {
@@ -125,13 +129,135 @@ async function getAvailabilityData(date, durationMin, gender = null) {
   return { closed: false, slots: slots.map(s => s.time), availableCount, therapistSlots, staff: activeStaff, therapistFreeSlotCount };
 }
 
-// GET /api/availability?date=YYYY-MM-DD&duration=60&therapistId=th_david&gender=female
+function createLocalBlockedTracker() {
+  const localBlocked = {};
+  const isLocallyBlocked = (tid, date, startMin, endMin) => {
+    if (!localBlocked[tid]) return false;
+    return localBlocked[tid].some((w) => w.date === date && w.start < endMin && w.end > startMin);
+  };
+  const recordBlock = (tid, date, startMin, endMin) => {
+    if (!localBlocked[tid]) localBlocked[tid] = [];
+    localBlocked[tid].push({ date, start: startMin, end: endMin });
+  };
+  return { isLocallyBlocked, recordBlock };
+}
+
+async function validateAndAssignBooking(b, guestIndex, { excludeBookingIds, isLocallyBlocked, recordBlock }) {
+  const date = b.p_booking_date ?? b.booking_date;
+  const time = b.p_booking_time ?? b.booking_time;
+  const durationMin = b.p_duration_min ?? b.duration_min;
+  let reqTherapistId = b.p_therapist_id ?? b.therapist_id ?? null;
+  const guestLabel = `Guest ${guestIndex + 1}`;
+
+  const partyArray = b.p_party ?? b.party;
+  const requestedLabel = partyArray && partyArray[0] && partyArray[0].therapist ? partyArray[0].therapist : null;
+  const genderFilter = requestedLabel === 'female' || requestedLabel === 'male' ? requestedLabel : null;
+  const data = await getAvailabilityData(date, durationMin, genderFilter, { excludeBookingIds });
+
+  const startMin = parseAmPm(time);
+  if (startMin === null || data.closed || !data.slots.includes(time)) {
+    return {
+      error: {
+        status: 409,
+        body: {
+          error: 'SLOT_UNAVAILABLE',
+          guestIndex,
+          time,
+          detail: `${guestLabel}: ${time || 'time'} is not available on this date.`,
+        },
+      },
+    };
+  }
+  const endMin = startMin + durationMin;
+
+  if (reqTherapistId) {
+    const therapistUnavail = data.therapistSlots[reqTherapistId]?.unavailable || [];
+    if (therapistUnavail.includes(time) || isLocallyBlocked(reqTherapistId, date, startMin, endMin)) {
+      const therapistName = data.staff.find((s) => s.id === reqTherapistId)?.name;
+      return {
+        error: {
+          status: 409,
+          body: {
+            error: 'SLOT_UNAVAILABLE',
+            guestIndex,
+            time,
+            detail: therapistName
+              ? `${guestLabel}: ${therapistName} was just booked at ${time}. Please choose another time or therapist.`
+              : `${guestLabel}: the selected therapist was just booked at ${time}. Please choose another time or therapist.`,
+          },
+        },
+      };
+    }
+  } else {
+    let candidates = data.staff.filter(
+      (s) =>
+        !data.therapistSlots[s.id]?.unavailable.includes(time) &&
+        !isLocallyBlocked(s.id, date, startMin, endMin),
+    );
+
+    if (genderFilter) {
+      candidates = candidates.filter((s) => s.gender === genderFilter);
+    }
+
+    if (candidates.length === 0) {
+      const poolLabel = genderFilter ? `${genderFilter} therapist` : 'therapist';
+      return {
+        error: {
+          status: 409,
+          body: {
+            error: 'SLOT_UNAVAILABLE',
+            guestIndex,
+            time,
+            detail: `${guestLabel}: this time was just booked, so no ${poolLabel} is available at ${time}. Please pick another time.`,
+          },
+        },
+      };
+    }
+
+    candidates.sort((a, b) => data.therapistFreeSlotCount[b.id] - data.therapistFreeSlotCount[a.id]);
+    reqTherapistId = candidates[0].id;
+
+    if (b.p_therapist_id !== undefined) b.p_therapist_id = reqTherapistId;
+    else b.therapist_id = reqTherapistId;
+
+    if (partyArray && partyArray.length > 0) {
+      partyArray[0].therapist = candidates[0].name;
+    }
+  }
+
+  recordBlock(reqTherapistId, date, startMin, endMin);
+  return { therapistId: reqTherapistId };
+}
+
+function bookingPayloadFromInput(b) {
+  return {
+    customer_name: b.p_customer_name ?? b.customer_name,
+    customer_phone: b.p_customer_phone ?? b.customer_phone,
+    customer_email: b.p_customer_email ?? b.customer_email ?? '',
+    booking_date: b.p_booking_date ?? b.booking_date,
+    booking_time: b.p_booking_time ?? b.booking_time,
+    duration_min: b.p_duration_min ?? b.duration_min,
+    party: b.p_party ?? b.party,
+    services_total: b.p_services_total ?? b.services_total,
+    addons_total: b.p_addons_total ?? b.addons_total,
+    tip: b.p_tip ?? b.tip,
+    payment: b.p_payment ?? b.payment,
+    note: b.p_note ?? b.note ?? '',
+    therapist_id: b.p_therapist_id ?? b.therapist_id ?? null,
+    booking_group_id: b.p_booking_group_id ?? b.booking_group_id ?? null,
+  };
+}
+
+// GET /api/availability?date=YYYY-MM-DD&duration=60&therapistId=th_david&gender=female&excludeBookingIds=id1,id2
 router.get('/availability', async (req, res) => {
   try {
-    const { date, duration, therapistId, gender } = req.query;
+    const { date, duration, therapistId, gender, excludeBookingIds } = req.query;
     const durationMin = parseInt(duration) || 60;
+    const excludeIds = excludeBookingIds
+      ? String(excludeBookingIds).split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
 
-    const data = await getAvailabilityData(date, durationMin, gender);
+    const data = await getAvailabilityData(date, durationMin, gender, { excludeBookingIds: excludeIds });
 
     if (data.closed) {
       return res.json({ closed: true, slots: [], unavailable: [], availableCount: {}, therapistSlots: {} });
@@ -181,110 +307,22 @@ router.post('/bookings', async (req, res) => {
       bookingsToInsert = [body];
     }
 
-    // Parse "10:00 AM" → minutes from midnight
-    const parseAmPm = (str) => {
-      if (!str) return null;
-      const [time, ap] = str.trim().split(' ');
-      const [h, m] = time.split(':').map(Number);
-      return ((h % 12) + (ap === 'PM' ? 12 : 0)) * 60 + m;
-    };
-
-    // Track slots assigned during this request to prevent double-booking guests in the same party
-    const localBlocked = {};
-    const isLocallyBlocked = (tid, date, startMin, endMin) => {
-      if (!localBlocked[tid]) return false;
-      return localBlocked[tid].some(w => w.date === date && w.start < endMin && w.end > startMin);
-    };
+    const { isLocallyBlocked, recordBlock } = createLocalBlockedTracker();
 
     // Validate availability and auto-assign therapist for each booking
     for (let guestIndex = 0; guestIndex < bookingsToInsert.length; guestIndex++) {
       const b = bookingsToInsert[guestIndex];
-      const date = b.p_booking_date ?? b.booking_date;
-      const time = b.p_booking_time ?? b.booking_time;
-      const durationMin = b.p_duration_min ?? b.duration_min;
-      let reqTherapistId = b.p_therapist_id ?? b.therapist_id ?? null;
-      const guestLabel = `Guest ${guestIndex + 1}`;
-
-      const partyArray = b.p_party ?? b.party;
-      const requestedLabel = partyArray && partyArray[0] && partyArray[0].therapist ? partyArray[0].therapist : null;
-      const genderFilter = requestedLabel === 'female' || requestedLabel === 'male' ? requestedLabel : null;
-      const data = await getAvailabilityData(date, durationMin, genderFilter);
-
-      const startMin = parseAmPm(time);
-      if (startMin === null || data.closed || !data.slots.includes(time)) {
-        return res.status(409).json({
-          error: 'SLOT_UNAVAILABLE',
-          guestIndex,
-          time,
-          detail: `${guestLabel}: ${time || 'time'} is not available on this date.`,
-        });
+      const result = await validateAndAssignBooking(b, guestIndex, {
+        excludeBookingIds: [],
+        isLocallyBlocked,
+        recordBlock,
+      });
+      if (result.error) {
+        return res.status(result.error.status).json(result.error.body);
       }
-      const endMin = startMin + durationMin;
-
-      if (reqTherapistId) {
-        const therapistUnavail = data.therapistSlots[reqTherapistId]?.unavailable || [];
-        if (therapistUnavail.includes(time) || isLocallyBlocked(reqTherapistId, date, startMin, endMin)) {
-          const therapistName = data.staff.find((s) => s.id === reqTherapistId)?.name
-          return res.status(409).json({
-            error: 'SLOT_UNAVAILABLE',
-            guestIndex,
-            time,
-            detail: therapistName
-              ? `${guestLabel}: ${therapistName} was just booked at ${time}. Please choose another time or therapist.`
-              : `${guestLabel}: the selected therapist was just booked at ${time}. Please choose another time or therapist.`,
-          });
-        }
-      } else {
-        let candidates = data.staff.filter(s =>
-          !data.therapistSlots[s.id]?.unavailable.includes(time) && !isLocallyBlocked(s.id, date, startMin, endMin)
-        );
-
-        if (genderFilter) {
-          candidates = candidates.filter(s => s.gender === genderFilter);
-        }
-
-        if (candidates.length === 0) {
-          const poolLabel = genderFilter ? `${genderFilter} therapist` : 'therapist';
-          return res.status(409).json({
-            error: 'SLOT_UNAVAILABLE',
-            guestIndex,
-            time,
-            detail: `${guestLabel}: this time was just booked, so no ${poolLabel} is available at ${time}. Please pick another time.`,
-          });
-        }
-
-        candidates.sort((a, b) => data.therapistFreeSlotCount[b.id] - data.therapistFreeSlotCount[a.id]);
-        reqTherapistId = candidates[0].id;
-
-        if (b.p_therapist_id !== undefined) b.p_therapist_id = reqTherapistId;
-        else b.therapist_id = reqTherapistId;
-
-        if (partyArray && partyArray.length > 0) {
-          partyArray[0].therapist = candidates[0].name;
-        }
-      }
-
-      // Record this assignment locally so the next guest in the loop doesn't double-book them
-      if (!localBlocked[reqTherapistId]) localBlocked[reqTherapistId] = [];
-      localBlocked[reqTherapistId].push({ date, start: startMin, end: endMin });
     }
 
-    const payloads = bookingsToInsert.map(b => ({
-      customer_name: b.p_customer_name ?? b.customer_name,
-      customer_phone: b.p_customer_phone ?? b.customer_phone,
-      customer_email: b.p_customer_email ?? b.customer_email ?? '',
-      booking_date: b.p_booking_date ?? b.booking_date,
-      booking_time: b.p_booking_time ?? b.booking_time,
-      duration_min: b.p_duration_min ?? b.duration_min,
-      party: b.p_party ?? b.party,
-      services_total: b.p_services_total ?? b.services_total,
-      addons_total: b.p_addons_total ?? b.addons_total,
-      tip: b.p_tip ?? b.tip,
-      payment: b.p_payment ?? b.payment,
-      note: b.p_note ?? b.note ?? '',
-      therapist_id: b.p_therapist_id ?? b.therapist_id ?? null,
-      booking_group_id: b.p_booking_group_id ?? b.booking_group_id ?? null,
-    }));
+    const payloads = bookingsToInsert.map((b) => bookingPayloadFromInput(b));
 
     const { data, error } = await supabase
       .from('bookings')
@@ -332,6 +370,74 @@ router.put('/admin/bookings/:id/status', async (req, res) => {
     const { error } = await supabase.from('bookings').update({ status }).eq('id', id);
     if (error) throw error;
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update one or more booking rows (admin edit — validates slots, excludes self from conflicts)
+router.put('/admin/bookings', async (req, res) => {
+  try {
+    const updates = req.body?.bookings;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ error: 'INVALID_BODY', detail: 'Expected { bookings: [...] }' });
+    }
+
+    const excludeBookingIds = updates.map((b) => b.id).filter(Boolean);
+    const { isLocallyBlocked, recordBlock } = createLocalBlockedTracker();
+
+    const validated = [];
+    for (let guestIndex = 0; guestIndex < updates.length; guestIndex++) {
+      const row = updates[guestIndex];
+      if (!row.id) {
+        return res.status(400).json({ error: 'MISSING_ID', detail: `Guest ${guestIndex + 1} is missing booking id.` });
+      }
+
+      const b = {
+        booking_date: row.booking_date,
+        booking_time: row.booking_time,
+        duration_min: row.duration_min,
+        therapist_id: row.therapist_id ?? null,
+        party: row.party,
+      };
+
+      const result = await validateAndAssignBooking(b, guestIndex, {
+        excludeBookingIds,
+        isLocallyBlocked,
+        recordBlock,
+      });
+      if (result.error) {
+        return res.status(result.error.status).json(result.error.body);
+      }
+
+      validated.push({
+        id: row.id,
+        payload: {
+          booking_date: row.booking_date,
+          booking_time: row.booking_time,
+          duration_min: row.duration_min,
+          party: b.party,
+          services_total: row.services_total,
+          addons_total: row.addons_total,
+          tip: row.tip ?? 0,
+          payment: row.payment,
+          note: row.note ?? '',
+          therapist_id: b.therapist_id ?? result.therapistId ?? null,
+          customer_name: row.customer_name,
+          customer_phone: row.customer_phone,
+          customer_email: row.customer_email ?? '',
+        },
+      });
+    }
+
+    const updated = [];
+    for (const { id, payload } of validated) {
+      const { data, error } = await supabase.from('bookings').update(payload).eq('id', id).select();
+      if (error) throw error;
+      updated.push(data?.[0] || data);
+    }
+
+    res.json({ data: updated });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

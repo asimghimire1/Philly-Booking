@@ -76,6 +76,19 @@ export function AdminDataProvider({ children }) {
       }
     },
 
+    updateBookings: async (payloads) => {
+      const data = await apiFetch('/api/admin/bookings', {
+        method: 'PUT',
+        body: JSON.stringify({ bookings: payloads }),
+      })
+      const updated = data.data || []
+      setBookings((prev) => {
+        const map = Object.fromEntries(updated.map((row) => [row.id, row]))
+        return prev.map((b) => (map[b.id] ? { ...b, ...map[b.id] } : b))
+      })
+      return updated
+    },
+
     // staff
     addStaff: async ({ name, gender, role }) => {
       const firstName = name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '')
@@ -170,6 +183,8 @@ export function AdminDataProvider({ children }) {
     payment: b.payment,
     note: b.note,
     createdAt: b.created_at,
+    therapistId: b.therapist_id,
+    bookingGroupId: b.booking_group_id,
   }))
 
   const value = {

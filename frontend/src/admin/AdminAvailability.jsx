@@ -85,9 +85,15 @@ export default function AdminAvailability() {
           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
           <path d="M12 8v4l2.5 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        Changes save automatically. Once the backend is connected, these hours
+        Changes save automatically. These hours
         drive the time slots customers can book.
       </p>
+
+      {errorMessage && (
+        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {errorMessage}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* Weekly hours */}
@@ -126,12 +132,6 @@ export default function AdminAvailability() {
             )
           })}
         </Card>
-
-        {errorMessage && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 lg:col-span-2">
-            {errorMessage}
-          </div>
-        )}
 
         {/* Closed dates */}
         <Card className="h-fit p-5">

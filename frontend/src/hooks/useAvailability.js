@@ -14,7 +14,17 @@ import { computeGuestAvailability } from '../utils/availability.js'
  * @param {Array}  params.claimedTherapistSlots - [{therapistId, time}] claimed by other guests
  * @param {Array}  params.therapists - Live therapist roster for resolving named selections
  */
-export function useAvailability({ date, durationMin, therapistId, gender, claimedCount = 0, claimedTherapistSlots = [], therapists = [], refreshTick = 0 }) {
+export function useAvailability({
+  date,
+  durationMin,
+  therapistId,
+  gender,
+  claimedCount = 0,
+  claimedTherapistSlots = [],
+  therapists = [],
+  refreshTick = 0,
+  excludeBookingIds = [],
+}) {
   const [state, setState] = useState({
     slots: [],
     unavailable: new Set(),
@@ -35,7 +45,7 @@ export function useAvailability({ date, durationMin, therapistId, gender, claime
       ? new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 10)
       : date
 
-    const requestKey = `${dateStr}-${durationMin}-${therapistId || ''}-${gender || ''}-${claimedCount}-${refreshTick}`
+    const requestKey = `${dateStr}-${durationMin}-${therapistId || ''}-${gender || ''}-${claimedCount}-${refreshTick}-${excludeBookingIds.join('+')}`
     requestKeyRef.current = requestKey
 
     setState((s) => ({ ...s, slots: [], unavailable: new Set(), loading: true, error: null }))
@@ -47,6 +57,7 @@ export function useAvailability({ date, durationMin, therapistId, gender, claime
           durationMin,
           therapistId,
           gender: therapistId ? null : gender,
+          excludeBookingIds,
         })
 
         // Drop stale responses when the date/therapist changed while this fetch was in flight.
@@ -87,7 +98,7 @@ export function useAvailability({ date, durationMin, therapistId, gender, claime
     timerRef.current = setTimeout(run, 250)
 
     return () => clearTimeout(timerRef.current)
-  }, [date, durationMin, therapistId, gender, claimedCount, refreshTick, JSON.stringify(claimedTherapistSlots), JSON.stringify(therapists)])
+  }, [date, durationMin, therapistId, gender, claimedCount, refreshTick, JSON.stringify(claimedTherapistSlots), JSON.stringify(therapists), JSON.stringify(excludeBookingIds)])
 
   return state
 }

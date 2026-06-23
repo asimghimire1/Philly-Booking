@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAdminData } from './data.jsx'
 import BookingDetailModal from './BookingDetailModal.jsx'
 import { Card, PageHeading, StatusBadge, PaymentBadge, Initials, fieldCls, fmtDate, money } from './ui.jsx'
@@ -7,6 +8,7 @@ const FILTERS = ['all', 'upcoming', 'completed', 'cancelled']
 
 export default function AdminBookings() {
   const { bookings, setBookingStatus } = useAdminData()
+  const navigate = useNavigate()
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState(null)
@@ -124,6 +126,10 @@ export default function AdminBookings() {
         booking={open}
         onClose={() => setOpenId(null)}
         onSetStatus={setBookingStatus}
+        onEdit={(bookingId) => {
+          setOpenId(null)
+          navigate(`/admin/bookings/${bookingId}/edit`)
+        }}
       />
     </div>
   )

@@ -9,6 +9,7 @@ function buildParty(guests) {
     service: confirmLabel(g.selection, 'en'),
     therapist: therapistLabel(g.therapist),
     addons: g.selection.addonIds ?? [],
+    _selection: g.selection,
   }))
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const startOfDay = (d) => {
   const x = new Date(d)
@@ -18,12 +19,39 @@ export default function DatePicker({ value, onChange, locale }) {
     () => new Date(value.getFullYear(), value.getMonth(), 1),
   )
   const ref = useRef(null)
+  const triggerRef = useRef(null)
+  const panelRef = useRef(null)
+  const [panelStyle, setPanelStyle] = useState(null)
   const today = startOfDay(new Date())
 
   useEffect(() => {
     if (!open) return
+    const updatePosition = () => {
+      const el = triggerRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      setPanelStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: Math.min(304, window.innerWidth - 20),
+        zIndex: 9999,
+      })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     const onDoc = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+      if (ref.current?.contains(e.target) || panelRef.current?.contains(e.target)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -64,6 +92,7 @@ export default function DatePicker({ value, onChange, locale }) {
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-colors hover:border-teal/50"
@@ -86,62 +115,69 @@ export default function DatePicker({ value, onChange, locale }) {
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full z-20 mt-2 w-[19rem] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-          <div className="mb-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() - 1, 1))}
-              disabled={!canPrev}
-              className="rounded-lg p-1.5 text-slate-500 enabled:hover:bg-slate-100 disabled:text-slate-200"
-              aria-label="Previous month"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </button>
-            <span className="font-semibold text-navy">{monthFmt.format(view)}</span>
-            <button
-              type="button"
-              onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() + 1, 1))}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
-              aria-label="Next month"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </button>
-          </div>
+      {open &&
+        panelStyle &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={panelStyle}
+            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() - 1, 1))}
+                disabled={!canPrev}
+                className="rounded-lg p-1.5 text-slate-500 enabled:hover:bg-slate-100 disabled:text-slate-200"
+                aria-label="Previous month"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <span className="font-semibold text-navy">{monthFmt.format(view)}</span>
+              <button
+                type="button"
+                onClick={() => setView((v) => new Date(v.getFullYear(), v.getMonth() + 1, 1))}
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+                aria-label="Next month"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400">
-            {weekdays.map((w, i) => (
-              <span key={i} className="py-1">{w}</span>
-            ))}
-          </div>
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {cells.map((day, i) =>
-              day === null ? (
-                <span key={i} />
-              ) : (
-                <button
-                  key={i}
-                  type="button"
-                  disabled={day < today}
-                  onClick={() => {
-                    onChange(day)
-                    setOpen(false)
-                  }}
-                  className={`h-9 rounded-lg text-sm transition-colors ${
-                    sameDay(day, value)
-                      ? 'bg-navy font-semibold text-white'
-                      : day < today
-                        ? 'cursor-not-allowed text-slate-300'
-                        : 'text-navy hover:bg-mint'
-                  }`}
-                >
-                  {day.getDate()}
-                </button>
-              ),
-            )}
-          </div>
-        </div>
-      )}
+            <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400">
+              {weekdays.map((w, i) => (
+                <span key={i} className="py-1">{w}</span>
+              ))}
+            </div>
+            <div className="mt-1 grid grid-cols-7 gap-1">
+              {cells.map((day, i) =>
+                day === null ? (
+                  <span key={i} />
+                ) : (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={day < today}
+                    onClick={() => {
+                      onChange(day)
+                      setOpen(false)
+                    }}
+                    className={`h-9 rounded-lg text-sm transition-colors ${
+                      sameDay(day, value)
+                        ? 'bg-navy font-semibold text-white'
+                        : day < today
+                          ? 'cursor-not-allowed text-slate-300'
+                          : 'text-navy hover:bg-mint'
+                    }`}
+                  >
+                    {day.getDate()}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

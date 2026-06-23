@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Modal from '../components/booking/Modal.jsx'
 import { useAdminData } from './data.jsx'
 import BookingDetailModal from './BookingDetailModal.jsx'
@@ -565,6 +566,7 @@ function OverlapModal({ items, onClose, onPick }) {
 
 export default function AdminCalendar() {
   const { bookings, staff, availability, setBookingStatus } = useAdminData()
+  const navigate = useNavigate()
   const [view, setView] = useState('week')
   const [weekStart, setWeekStart] = useState(() => weekSunday(new Date()))
   const [dayDate, setDayDate] = useState(startOfToday)
@@ -691,6 +693,10 @@ export default function AdminCalendar() {
         booking={open}
         onClose={() => setOpenId(null)}
         onSetStatus={setBookingStatus}
+        onEdit={(bookingId) => {
+          setOpenId(null)
+          navigate(`/admin/bookings/${bookingId}/edit`)
+        }}
       />
     </div>
   )

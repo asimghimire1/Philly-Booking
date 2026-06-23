@@ -12,17 +12,22 @@ export function guestAvailabilityParams(guest) {
   return { therapistId, gender }
 }
 
-export function availabilityFetchKey(dateStr, durationMin, therapistId, gender) {
-  return `${dateStr}|${durationMin}|${therapistId || ''}|${gender || ''}`
+export function availabilityFetchKey(dateStr, durationMin, therapistId, gender, excludeBookingIds = []) {
+  const exclude = excludeBookingIds.length ? excludeBookingIds.slice().sort().join('+') : ''
+  return `${dateStr}|${durationMin}|${therapistId || ''}|${gender || ''}|${exclude}`
 }
 
-export async function fetchAvailability({ dateStr, durationMin, therapistId, gender }, retries = 2) {
+export async function fetchAvailability(
+  { dateStr, durationMin, therapistId, gender, excludeBookingIds = [] },
+  retries = 2,
+) {
   const params = new URLSearchParams({
     date: dateStr,
     duration: String(durationMin),
   })
   if (therapistId) params.set('therapistId', therapistId)
   else if (gender) params.set('gender', gender)
+  if (excludeBookingIds.length) params.set('excludeBookingIds', excludeBookingIds.join(','))
 
   let lastErr
   for (let attempt = 0; attempt <= retries; attempt++) {
