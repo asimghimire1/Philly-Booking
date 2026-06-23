@@ -10,13 +10,22 @@ import { useBooking } from '../../context/BookingContext.jsx'
 
 export default function BookingLayout() {
   const { pathname } = useLocation()
-  const { maxStep } = useBooking()
+  const { maxStep, completed, resetBooking } = useBooking()
   const currentStep = stepForPath(pathname)
 
   // Each step should open at the top, not at the previous step's scroll position.
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 })
   }, [pathname])
+
+  // If the user hits the back button from the confirmation page, this layout
+  // remounts. We reset the booking so they start fresh instead of seeing completed data.
+  useEffect(() => {
+    if (completed) {
+      resetBooking()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // You can go back to earlier steps, but not skip ahead via the URL — jumping
   // forward sends you back to the start to go through the flow in order.

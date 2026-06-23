@@ -1,6 +1,6 @@
 
-import { basePrice, addonsPrice, computeTip, confirmLabel } from '../data/catalog.js'
-import { therapistLabel } from '../data/therapists.js'
+import { basePrice, addonsPrice, computeTip, confirmLabel, selectionMinutes } from '../data/catalog.js'
+import { therapistLabel } from '../data/therapists.jsx'
 
 // Formats the guest list into the `party` JSONB shape the bookings table expects.
 function buildParty(guests) {
@@ -12,31 +12,38 @@ function buildParty(guests) {
   }))
 }
 
-export async function submitBooking({ guests, dateTime, details }) {
+export async function submitBooking({ guests, details }) {
   const booked = guests.filter((g) => g.confirmed || guests.length === 1)
   const servicesTotal = booked.reduce((s, g) => s + basePrice(g.selection), 0)
   const addonsTotal = booked.reduce((s, g) => s + addonsPrice(g.selection), 0)
-  const tip = computeTip(details, servicesTotal + addonsTotal)
+  const totalTip = computeTip(details, servicesTotal + addonsTotal)
 
-  const totalDuration = booked.reduce((sum, g) => {
-    // Adjust if you track per-guest duration differently
-    return sum + 60
-  }, 0)
+  const bookingGroupId = crypto.randomUUID()
 
-  const payload = {
-    customer_name: details.name.trim(),
-    customer_phone: details.phone.trim(),
-    customer_email: details.email.trim(),
-    booking_date: dateTime.date.toISOString().slice(0, 10), // yyyy-mm-dd
-    booking_time: dateTime.time,
-    duration_min: totalDuration,
-    party: buildParty(booked),
-    services_total: servicesTotal,
-    addons_total: addonsTotal,
-    tip,
-    payment: details.payment,
-    note: details.note?.trim() || '',
-  }
+  const bookingsPayload = booked.map((g) => {
+    const getLocalDateStr = (d) => d instanceof Date 
+      ? new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 10)
+      : String(d).slice(0, 10);
+      
+    const dateStr = g.dateTime?.date ? getLocalDateStr(g.dateTime.date) : '';
+
+    return {
+      p_customer_name: details.name.trim(),
+      p_customer_phone: details.phone.trim(),
+      p_customer_email: details.email.trim(),
+      p_booking_date: dateStr,
+      p_booking_time: g.dateTime?.time || '',
+      p_duration_min: selectionMinutes(g.selection),
+      p_party: buildParty([g]),
+      p_services_total: basePrice(g.selection),
+      p_addons_total: addonsPrice(g.selection),
+      p_tip: g.primary ? totalTip : 0,
+      p_payment: details.payment,
+      p_note: details.note?.trim() || '',
+      p_therapist_id: g.therapist?.therapistId || null,
+      p_booking_group_id: bookingGroupId,
+    }
+  })
 
   const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -45,28 +52,28 @@ export async function submitBooking({ guests, dateTime, details }) {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      p_customer_name: payload.customer_name,
-      p_customer_phone: payload.customer_phone,
-      p_customer_email: payload.customer_email,
-      p_booking_date: payload.booking_date,
-      p_booking_time: payload.booking_time,
-      p_duration_min: payload.duration_min,
-      p_party: payload.party,
-      p_services_total: payload.services_total,
-      p_addons_total: payload.addons_total,
-      p_tip: payload.tip,
-      p_payment: payload.payment,
-      p_note: payload.note,
-    }),
+    body: JSON.stringify(bookingsPayload),
   })
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}))
     console.error('Booking submission failed:', errData)
+    if (errData.error === 'SLOT_UNAVAILABLE') {
+      const err = new Error('SLOT_UNAVAILABLE')
+      if (errData.guestIndex != null) {
+        const guestNum = errData.guestIndex + 1
+        const time = bookingsPayload[errData.guestIndex]?.p_booking_time
+        err.detail =
+          errData.detail ||
+          `Guest ${guestNum} at ${time}: not enough therapists available at that time.`
+      } else {
+        err.detail = errData.detail || null
+      }
+      throw err
+    }
     throw new Error('Could not save your booking. Please try again.')
   }
 
   const { data } = await response.json()
-  return data?.[0] || data
+  return data
 }

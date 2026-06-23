@@ -121,12 +121,14 @@ export function Field({ label, children }) {
 
 // Brand date formatting, e.g. "Thu, Jun 18".
 export function fmtDate(isoStr) {
-  const [y, m, d] = isoStr.split('-').map(Number)
+  if (!isoStr) return '';
+  const datePart = String(isoStr).split(/T|\s/)[0];
+  const [y, m, d] = datePart.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-  })
+  });
 }
 
 export const money = (n) => `$${Number(n || 0).toFixed(2)}`

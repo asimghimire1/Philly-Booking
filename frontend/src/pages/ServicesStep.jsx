@@ -323,8 +323,8 @@ function PendingRow({ guest, name, avatar, primary }) {
 }
 
 export default function ServicesStep() {
-  const { guests, activeId } = useBooking()
-  const { t } = useI18n()
+  const { guests, activeId, copyServicesToAll } = useBooking()
+  const { t, lang } = useI18n()
   const single = guests.length === 1
 
   // When the active guest changes (e.g. after confirming one), bring the newly
@@ -368,8 +368,9 @@ export default function ServicesStep() {
           const name = nameOf(guest, i)
           const avatar = avatarOf(guest, i)
 
+          let node
           if (guest.id === activeId) {
-            return (
+            node = (
               <div key={guest.id} ref={activeRef} className="scroll-mt-6">
                 <GuestEditor
                   guest={guest}
@@ -381,15 +382,37 @@ export default function ServicesStep() {
                 />
               </div>
             )
-          }
-          if (guest.confirmed) {
-            return (
+          } else if (guest.confirmed) {
+            node = (
               <DoneRow key={guest.id} guest={guest} name={name} avatar={avatar} primary={guest.primary} />
             )
+          } else {
+            node = (
+              <PendingRow key={guest.id} guest={guest} name={name} avatar={avatar} primary={guest.primary} />
+            )
           }
-          return (
-            <PendingRow key={guest.id} guest={guest} name={name} avatar={avatar} primary={guest.primary} />
-          )
+
+          if (i === 0 && !single && guest.confirmed) {
+            return (
+              <div key={guest.id} className="space-y-3">
+                {node}
+                <div className="flex justify-end pr-2">
+                  <button
+                    type="button"
+                    onClick={copyServicesToAll}
+                    className="flex items-center gap-1.5 text-sm font-medium text-teal hover:text-teal-600 hover:underline"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {lang === 'zh' ? '应用到所有客人' : 'Apply to all guests'}
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          return node
         })}
       </div>
 

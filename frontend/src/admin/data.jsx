@@ -78,7 +78,8 @@ export function AdminDataProvider({ children }) {
 
     // staff
     addStaff: async ({ name, gender, role }) => {
-      const id = `st_${Date.now()}`
+      const firstName = name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '')
+      const id = firstName ? `th_${firstName}` : `st_${Date.now()}`
       try {
         await apiFetch('/api/admin/staff', { method: 'POST', body: JSON.stringify({ id, name: name.trim(), gender, role: role.trim(), active: true }) })
         setStaff((prev) => [...prev, { id, name, gender, role, active: true }])

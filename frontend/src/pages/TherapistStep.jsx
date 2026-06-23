@@ -4,7 +4,7 @@ import Pill from '../components/booking/Pill.jsx'
 import SelectableCard from '../components/booking/SelectableCard.jsx'
 import InfoBox from '../components/booking/InfoBox.jsx'
 import BackButton from '../components/booking/BackButton.jsx'
-import { therapists } from '../data/therapists.js'
+import { useTherapists } from '../data/therapists.jsx'
 
 function Avatar({ text, primary }) {
   return (
@@ -23,6 +23,7 @@ const MODES = ['none', 'female', 'male', 'name']
 function TherapistPicker({ guest, name, avatar, primary, showHeader }) {
   const { t, lang } = useI18n()
   const { setTherapistMode, setTherapist } = useBooking()
+  const { therapists } = useTherapists()
   const pref = guest.therapist ?? { mode: 'none', therapistId: null }
 
   const modeLabel = {
@@ -69,9 +70,7 @@ function TherapistPicker({ guest, name, avatar, primary, showHeader }) {
               selected={pref.therapistId === th.id}
               onClick={() => setTherapist(guest.id, th.id)}
               title={th.name}
-              desc={`${th.gender === 'male' ? t('therapist.male') : t('therapist.female')} · ${
-                lang === 'zh' ? th.descZh : th.descEn
-              }`}
+              desc={`${th.gender === 'male' ? t('therapist.male') : t('therapist.female')} · ${lang === 'zh' ? th.descZh : th.descEn}`}
             />
           ))}
         </div>
@@ -81,8 +80,8 @@ function TherapistPicker({ guest, name, avatar, primary, showHeader }) {
 }
 
 export default function TherapistStep() {
-  const { guests } = useBooking()
-  const { t } = useI18n()
+  const { guests, copyTherapistToAll } = useBooking()
+  const { t, lang } = useI18n()
 
   const nameOf = (g, i) =>
     g.primary ? t('guest.primaryName') : `${t('guest.label')} ${i + 1}`
@@ -105,14 +104,29 @@ export default function TherapistStep() {
 
       <div className="mt-7 space-y-8">
         {guests.map((guest, i) => (
-          <TherapistPicker
-            key={guest.id}
-            guest={guest}
-            name={nameOf(guest, i)}
-            avatar={avatarOf(guest, i)}
-            primary={guest.primary}
-            showHeader={!single}
-          />
+          <div key={guest.id} className="space-y-3">
+            <TherapistPicker
+              guest={guest}
+              name={nameOf(guest, i)}
+              avatar={avatarOf(guest, i)}
+              primary={guest.primary}
+              showHeader={!single}
+            />
+            {i === 0 && !single && (
+              <div className="flex justify-end pr-2 -mt-2">
+                <button
+                  type="button"
+                  onClick={copyTherapistToAll}
+                  className="flex items-center gap-1.5 text-sm font-medium text-teal hover:text-teal-600 hover:underline"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {lang === 'zh' ? '应用到所有客人' : 'Apply to all guests'}
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 

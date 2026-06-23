@@ -13,7 +13,7 @@ import {
   confirmLabel,
   getAddon,
 } from '../data/catalog.js'
-import { therapistLabel } from '../data/therapists.js'
+import { findTherapistById, therapistLabel, useTherapists } from '../data/therapists.jsx'
 
 const money = (n) => `$${n.toFixed(2)}`
 
@@ -23,9 +23,8 @@ const GIFT_URL = 'https://squareup.com/gift/KK448W6ER0JQG/order'
 function Avatar({ text, primary }) {
   return (
     <span
-      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${
-        primary ? 'bg-teal' : 'bg-navy'
-      }`}
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${primary ? 'bg-teal' : 'bg-navy'
+        }`}
     >
       {text}
     </span>
@@ -44,7 +43,8 @@ function Row({ label, value, muted }) {
 }
 
 export default function ConfirmationPage() {
-  const { guests, dateTime, details, completed, bookingRef } = useBooking()
+  const { guests, details, completed, bookingRef, resetBooking } = useBooking()
+  const { therapists } = useTherapists()
 
   const { t, lang } = useI18n()
   const locale = lang === 'zh' ? 'zh-CN' : 'en-US'
@@ -66,19 +66,13 @@ export default function ConfirmationPage() {
     ? ` (${details.tipMode}%)`
     : ''
 
-  const longDate = new Intl.DateTimeFormat(locale, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(dateTime.date)
-
   const guestName = (g, i) =>
     g.primary ? t('confirm.you') : `${t('guest.label')} ${i + 1}`
   const avatar = (g, i) => (g.primary ? 'Y' : `G${i + 1}`)
 
   const subLine = (g) => {
     const raw = therapistLabel(g.therapist)
+    const liveName = findTherapistById(therapists, g.therapist?.therapistId)?.name
     const thName =
       raw === 'female'
         ? t('therapist.female')
@@ -86,7 +80,7 @@ export default function ConfirmationPage() {
           ? t('therapist.male')
           : raw === 'none'
             ? t('therapist.noPref')
-            : raw // a specific practitioner's name
+            : liveName || raw // a specific practitioner's name
     const addonNames = (g.selection.addonIds ?? []).map((id) => {
       const a = getAddon(id)
       return a?.free ? `${a.nameEn} ${t('confirm.free')}` : a?.nameEn
@@ -114,9 +108,9 @@ export default function ConfirmationPage() {
                   {t('confirm.title')}
                 </h1>
                 <p className="mt-1 text-slate-500">{t('confirm.subtitle')}</p>
-                {bookingRef && (
+                {bookingRef && bookingRef.length > 0 && (
                   <p className="mt-1 text-sm text-slate-500">
-                    Confirmation #{bookingRef}
+                    Confirmation #{bookingRef.join(', #')}
                   </p>
                 )}
               </div>
@@ -130,12 +124,27 @@ export default function ConfirmationPage() {
                   <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
                   <path d="M12 8v4l2.5 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <div className="min-w-0 text-sm text-slate-600">
-                  <p className="font-semibold text-navy">
-                    {dateTime.time ? `${longDate} · ${dateTime.time}` : longDate}
-                  </p>
-                  <p className="mt-0.5">{t('confirm.address')}</p>
-                  <p className="mt-0.5">{t('confirm.arrive')}</p>
+                <div className="min-w-0 text-sm text-slate-600 flex-1 space-y-2">
+                  <div>
+                    {booked.map((g, i) => {
+                      const gLongDate = g.dateTime?.date ? new Intl.DateTimeFormat(locale, {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }).format(g.dateTime.date) : ''
+                      return (
+                        <p key={g.id} className="text-slate-700 mt-1">
+                          <span className="font-semibold text-navy">{guestName(g, i)}:</span>{' '}
+                          {g.dateTime?.time ? `${gLongDate} · ${g.dateTime.time}` : gLongDate}
+                        </p>
+                      )
+                    })}
+                  </div>
+                  <div className="border-t border-teal/10 pt-2">
+                    <p className="text-xs text-slate-500">{t('confirm.address')}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{t('confirm.arrive')}</p>
+                  </div>
                 </div>
               </div>
 
@@ -194,7 +203,7 @@ export default function ConfirmationPage() {
               </div>
             </div>
 
-            <div className="hover-lift relative overflow-hidden rounded-2xl bg-gradient-to-br from-navy to-teal p-6 text-white">
+            <div className="hover-lift relative overflow-hidden rounded-2xl bg-linear-to-br from-navy to-teal p-6 text-white">
               {/* Sheen sweeping across the card to draw the eye to the CTA. */}
               <span className="animate-sheen pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-white/10" />
               <div className="relative">

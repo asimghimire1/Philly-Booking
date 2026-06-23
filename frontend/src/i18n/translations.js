@@ -93,11 +93,24 @@ export const translations = {
     'datetime.info':
       'Times reflect therapist availability plus a short prep buffer between sessions.',
     'datetime.pickTime': 'Pick a time to continue.',
+    'datetime.notEnoughSlots':
+      'Not enough back-to-back slots for everyone on this date. {count} guest(s) still need a time — try an earlier start, a different date, or another therapist.',
+    'datetime.guestNoSlot':
+      'No consecutive slot is available for this guest with the current schedule. Pick a time manually, choose another date, or split the party across therapists.',
+    'datetime.poolExhausted':
+      '{time} only has room for {capacity} {pool} at once — Guests {guests} need a different time.',
+    'datetime.therapistOverlap':
+      'Guests {guests} overlap on the same therapist at {time}. Stagger their times or choose different therapists.',
+    'datetime.scheduleConflict': 'Some guests have conflicting times. Please fix the schedule before continuing.',
     'summary.servicesAddons': 'Services + add-ons',
     'summary.date': 'Date',
     'summary.time': 'Time',
     'summary.dateTimeRow': 'Date & time',
     'summary.holdNote': 'Your slot is held for 10 minutes while you finish.',
+    'summary.slotUnavailable':
+      'One or more times are no longer available. Please review the highlighted guests and pick new times.',
+    'summary.slotUnavailableDetail':
+      'Could not book Guest {guest} at {time}. Only {capacity} {pool} available at that time.',
 
     // Details & payment step
     'details.title': 'Details & payment',
@@ -269,11 +282,23 @@ export const translations = {
     'datetime.slotHint': '{dur} 时段',
     'datetime.info': '时段已考虑理疗师的空档以及理疗之间的准备时间。',
     'datetime.pickTime': '请选择一个时段后继续。',
+    'datetime.notEnoughSlots':
+      '该日期没有足够的连续时段容纳所有客人。仍有 {count} 位客人未选时间 — 请尝试更早的开始时间、更换日期或选择其他理疗师。',
+    'datetime.guestNoSlot':
+      '按当前排程，该客人没有可用的连续时段。请手动选择时间、更换日期，或为部分客人安排不同理疗师。',
+    'datetime.poolExhausted':
+      '{time} 同时最多只能安排 {capacity} 位{pool} — 客人 {guests} 需要更换时间。',
+    'datetime.therapistOverlap':
+      '客人 {guests} 在同一理疗师的 {time} 时段发生冲突。请错开时间或选择不同理疗师。',
+    'datetime.scheduleConflict': '部分客人的时间存在冲突，请先调整后再继续。',
     'summary.servicesAddons': '服务 + 附加',
     'summary.date': '日期',
     'summary.time': '时间',
     'summary.dateTimeRow': '日期与时间',
     'summary.holdNote': '您的时段将为您保留 10 分钟以完成预约。',
+    'summary.slotUnavailable': '部分时段已无法预约。请检查标出的客人并重新选择时间。',
+    'summary.slotUnavailableDetail':
+      '无法为客人 {guest} 预约 {time}。该时段仅有 {capacity} 位{pool}可用。',
 
     // Details & payment step
     'details.title': '结账',

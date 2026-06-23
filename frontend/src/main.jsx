@@ -5,14 +5,17 @@ import './index.css'
 import App from './App.jsx'
 import { BookingProvider } from './context/BookingContext.jsx'
 import { LanguageProvider } from './i18n/LanguageContext.jsx'
+import { TherapistProvider } from './data/therapists.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <LanguageProvider>
-        <BookingProvider>
-          <App />
-        </BookingProvider>
+        <TherapistProvider>
+          <BookingProvider>
+            <App />
+          </BookingProvider>
+        </TherapistProvider>
       </LanguageProvider>
     </BrowserRouter>
   </StrictMode>,

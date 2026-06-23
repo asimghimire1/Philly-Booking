@@ -9,8 +9,10 @@ import {
   getAddon,
   computeTip,
   hasSelection,
+  selectionMinutes,
 } from '../../data/catalog.js'
-import { therapistLabel } from '../../data/therapists.js'
+import { findTherapistById, therapistLabel, useTherapists } from '../../data/therapists.jsx'
+import { validatePartySchedule, formatScheduleError } from '../../utils/scheduleValidation.js'
 
 const money = (n) => `$${n.toFixed(2)}`
 
@@ -19,9 +21,8 @@ function Row({ label, value, muted, valueClass = '' }) {
     <div className="flex items-center justify-between gap-3 text-[15px]">
       <span className="min-w-0 truncate text-slate-600">{label}</span>
       <span
-        className={`shrink-0 ${
-          muted ? 'text-slate-400' : valueClass || 'font-medium text-navy'
-        }`}
+        className={`shrink-0 ${muted ? 'text-slate-400' : valueClass || 'font-medium text-navy'
+          }`}
       >
         {value}
       </span>
@@ -30,8 +31,9 @@ function Row({ label, value, muted, valueClass = '' }) {
 }
 
 export default function BookingSummary() {
-  const { guests, allConfirmed, dateTime, details, unlockStep, completeBooking, submitting, submitError } =
+  const { guests, allConfirmed, details, unlockStep, completeBooking, submitting, submitError, submitErrorDetail, dateTimeConfiguring, dateTimeShortfall } =
     useBooking()
+  const { therapists } = useTherapists()
   const { t, lang } = useI18n()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -47,11 +49,6 @@ export default function BookingSummary() {
   const counts = (g) => (single ? hasSelection(g.selection) : g.confirmed)
 
   const locale = lang === 'zh' ? 'zh-CN' : 'en-US'
-  const dateShort = new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    day: 'numeric',
-  }).format(dateTime.date)
-  const timeShort = dateTime.time ? dateTime.time.replace(':00', '') : '-'
 
   // Only counted guests contribute - total starts at $0 and grows.
   const services = guests.reduce(
@@ -77,11 +74,14 @@ export default function BookingSummary() {
   const servicesReady = single
     ? hasSelection(guests[0]?.selection)
     : allConfirmed
+  const dateTimeReady = guests.every((g) => !counts(g) || g.dateTime?.time)
+  const scheduleErrors = validatePartySchedule(guests, therapists, counts, selectionMinutes)
+  const scheduleBlocked = scheduleErrors.length > 0
   const blocked =
     (currentStep === 2 && !servicesReady) ||
-    (currentStep === 4 && !dateTime.time) ||
-    (currentStep === 5 && !detailsValid)
-  const canContinue = (!!target || currentStep === 5) && !blocked
+    (currentStep === 4 && (!dateTimeReady || dateTimeConfiguring || scheduleBlocked)) ||
+    (currentStep === 5 && (!detailsValid || scheduleBlocked))
+  const canContinue = (!!target || currentStep === 5) && !blocked && !submitting
 
   const footerText =
     currentStep === 2 && blocked
@@ -89,9 +89,17 @@ export default function BookingSummary() {
       : currentStep === 3
         ? t('therapist.availability')
         : currentStep === 4
-          ? blocked
-            ? t('datetime.pickTime')
-            : t('summary.holdNote')
+          ? dateTimeConfiguring
+            ? lang === 'zh'
+              ? '正在配置所有客人的时间...'
+              : 'Configuring times for all guests...'
+            : dateTimeShortfall > 0
+              ? t('datetime.notEnoughSlots', { count: dateTimeShortfall })
+              : scheduleBlocked
+                ? formatScheduleError(scheduleErrors[0], t, lang)
+                : blocked
+                  ? t('datetime.pickTime')
+                  : t('summary.holdNote')
           : currentStep === 5
             ? t('details.finalReview')
             : t('summary.disclaimer')
@@ -101,8 +109,12 @@ export default function BookingSummary() {
       unlockStep(currentStep + 1) // allow forward navigation to the next step
       navigate(target)
     } else {
-      await completeBooking() // now actually saves to Supabase
-      navigate('/confirmation') // only navigates after the save attempt finishes
+      const { success, error } = await completeBooking() // now actually saves to Supabase
+      if (success) {
+        navigate('/confirmation') // only navigates after the save attempt finishes
+      } else if (error === 'SLOT_UNAVAILABLE') {
+        navigate('/date-time') // send them back to pick a new time
+      }
     }
   }
 
@@ -125,20 +137,44 @@ export default function BookingSummary() {
             {tip > 0 && (
               <Row label={`${t('details.tip')}${tipPct}`} value={money(tip)} />
             )}
-            <Row
-              label={t('summary.dateTimeRow')}
-              value={`${dateShort} · ${timeShort}`}
-            />
+            {guests.map((g, i) => {
+              if (!counts(g)) return null
+              const gDateShort = g.dateTime?.date ? new Intl.DateTimeFormat(locale, {
+                month: 'short',
+                day: 'numeric',
+              }).format(g.dateTime.date) : '-'
+              const gTimeShort = g.dateTime?.time ? g.dateTime.time.replace(':00', '') : '-'
+              return (
+                <Row
+                  key={g.id}
+                  label={guests.length > 1 ? `${guestLabel(i)}` : t('summary.dateTimeRow')}
+                  value={`${gDateShort} · ${gTimeShort}`}
+                  muted={!g.dateTime?.time}
+                />
+              )
+            })}
           </>
         ) : showSchedule ? (
           <>
             <Row label={t('summary.servicesAddons')} value={money(services)} />
-            <Row label={t('summary.date')} value={dateShort} />
-            <Row
-              label={t('summary.time')}
-              value={dateTime.time ?? '-'}
-              muted={!dateTime.time}
-            />
+            {guests.map((g, i) => {
+              if (!counts(g)) return null
+              const gDateShort = g.dateTime?.date ? new Intl.DateTimeFormat(locale, {
+                month: 'short',
+                day: 'numeric',
+              }).format(g.dateTime.date) : '-'
+              return (
+                <div key={g.id} className="space-y-1 bg-white/40 p-2.5 rounded-lg border border-mint-200/50">
+                  {guests.length > 1 && <p className="text-xs font-bold text-navy mb-1">{guestLabel(i)}</p>}
+                  <Row label={t('summary.date')} value={gDateShort} />
+                  <Row
+                    label={t('summary.time')}
+                    value={g.dateTime?.time ?? '-'}
+                    muted={!g.dateTime?.time}
+                  />
+                </div>
+              )
+            })}
           </>
         ) : showBreakdown ? (
           guests.map((g, i) => {
@@ -148,12 +184,13 @@ export default function BookingSummary() {
             }
             const sel = g.selection
             const thLabel = therapistLabel(g.therapist)
+            const thName = findTherapistById(therapists, g.therapist?.therapistId)?.name
             const thValue =
               thLabel === 'female' || thLabel === 'male'
                 ? t(`therapist.${thLabel}`)
                 : thLabel === 'none'
                   ? t('therapist.noPref')
-                  : thLabel
+                  : thName || thLabel
             return (
               <div key={g.id} className="space-y-1.5">
                 <Row
@@ -213,13 +250,16 @@ export default function BookingSummary() {
         type="button"
         disabled={!canContinue || submitting}
         onClick={onContinue}
-        className={`group mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3.5 font-semibold text-white shadow-md transition-all duration-200 ${
-          canContinue
-            ? 'bg-gradient-to-r from-navy to-teal hover:opacity-95 hover:shadow-lg active:scale-[0.98]'
+        className={`group mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3.5 font-semibold text-white shadow-md transition-all duration-200 ${canContinue && !submitting
+            ? 'bg-linear-to-r from-navy to-teal hover:opacity-95 hover:shadow-lg active:scale-[0.98]'
             : 'cursor-not-allowed bg-slate-300 shadow-none'
-        }`}
+          }`}
       >
-        {t('summary.continue')}
+        {dateTimeConfiguring && currentStep === 4
+          ? lang === 'zh'
+            ? '配置中...'
+            : 'Configuring...'
+          : t('summary.continue')}
         <svg className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none">
           <path
             d="M5 12h14M13 6l6 6-6 6"
@@ -232,7 +272,19 @@ export default function BookingSummary() {
       </button>
 
       {submitError && (
-        <p className="mt-3 text-sm text-red-600">{submitError}</p>
+        <p className="mt-3 text-sm text-red-600">
+          {submitError === 'SLOT_UNAVAILABLE'
+            ? submitErrorDetail || t('summary.slotUnavailable')
+            : submitError}
+        </p>
+      )}
+
+      {scheduleBlocked && (currentStep === 4 || currentStep === 5) && (
+        <div className="mt-3 space-y-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+          {scheduleErrors.map((err, idx) => (
+            <p key={idx}>{formatScheduleError(err, t, lang)}</p>
+          ))}
+        </div>
       )}
 
       <p className="mt-3 text-center text-xs text-slate-500">{footerText}</p>

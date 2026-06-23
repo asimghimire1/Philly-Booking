@@ -1,11 +1,20 @@
-import { createContext, useContext, useMemo, useState } from 'react'
-import { getCombo } from '../data/catalog.js'
-import { getTherapist } from '../data/therapists.js'
+import { createContext, useContext, useMemo, useState, useCallback, useRef, useEffect } from 'react'
+import { getCombo, selectionMinutes } from '../data/catalog.js'
+import { findTherapistById, useTherapists } from '../data/therapists.jsx'
 import { submitBooking } from '../services/bookingService.js'
+import {
+  availabilityFetchKey,
+  fetchAvailability,
+  guestAvailabilityParams,
+  getLocalDateStr,
+} from '../services/availabilityService.js'
+import { computeGuestAvailability } from '../utils/availability.js'
+import { parseAmPm, findNextAvailableSlot } from '../utils/datetime.js'
+import { timeSlotsFor } from '../data/timeslots.js'
 
 // Default therapist preference: the roster is shown ("pick by name") so guests
 // can choose, but nobody is pre-selected.
-const defaultTherapist = () => ({ mode: 'name', therapistId: null })
+const defaultTherapist = () => ({ mode: 'none', therapistId: null })
 
 const BookingContext = createContext(null)
 
@@ -26,6 +35,12 @@ function defaultSelection() {
 
 // Booking always starts with just the primary guest ("You"). The first guest is
 // active immediately, so it gets a working selection up front.
+const defaultDateTime = () => {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return { date: d, time: null }
+}
+
 const initialGuests = [
   {
     id: 1,
@@ -33,11 +48,15 @@ const initialGuests = [
     selection: defaultSelection(),
     confirmed: false,
     therapist: defaultTherapist(),
+    dateTime: defaultDateTime(),
   },
 ]
 
 export function BookingProvider({ children }) {
+  const { therapists } = useTherapists()
   const [guests, setGuests] = useState(initialGuests)
+  const guestsRef = useRef(guests)
+  guestsRef.current = guests
   const [nextId, setNextId] = useState(2)
   const [activeId, setActiveId] = useState(1)
 
@@ -74,6 +93,7 @@ export function BookingProvider({ children }) {
         selection: startNow ? defaultSelection() : null,
         confirmed: false,
         therapist: defaultTherapist(),
+        dateTime: defaultDateTime(),
       },
     ])
     setNextId((n) => n + 1)
@@ -135,7 +155,7 @@ export function BookingProvider({ children }) {
       // Drop a picked therapist that no longer fits the chosen mode.
       if (mode === 'none') therapistId = null
       else if (mode === 'female' || mode === 'male') {
-        if (getTherapist(therapistId)?.gender !== mode) therapistId = null
+        if (findTherapistById(therapists, therapistId)?.gender !== mode) therapistId = null
       }
       return { therapist: { mode, therapistId } }
     })
@@ -143,15 +163,16 @@ export function BookingProvider({ children }) {
   const setTherapist = (id, therapistId) =>
     patchGuest(id, (g) => ({ therapist: { ...g.therapist, therapistId } }))
 
-  // ---- date & time (whole party) ----
-  const [dateTime, setDateTime] = useState(() => {
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    return { date: d, time: null }
-  })
-  // Changing the date clears the time, since availability differs per day.
-  const setDate = (date) => setDateTime({ date, time: null })
-  const setTime = (time) => setDateTime((s) => ({ ...s, time }))
+  // ---- date & time (per guest) ----
+  const setGuestDate = (id, date) => {
+    setDateTimeShortfall(0)
+    patchGuest(id, (g) => ({ dateTime: { date, time: null } }))
+  }
+
+  const setGuestTime = (id, time) => {
+    setDateTimeShortfall(0)
+    patchGuest(id, (g) => ({ dateTime: { ...(g.dateTime || defaultDateTime()), time } }))
+  }
 
   // ---- details & checkout ----
   const [details, setDetails] = useState({
@@ -173,23 +194,273 @@ export function BookingProvider({ children }) {
   const [completed, setCompleted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [submitErrorDetail, setSubmitErrorDetail] = useState(null)
   const [bookingRef, setBookingRef] = useState(null)
+  const [dateTimeApplying, setDateTimeApplying] = useState(false)
+  const [guestAvailabilityLoading, setGuestAvailabilityLoadingState] = useState({})
+  const [dateTimeShortfall, setDateTimeShortfall] = useState(0)
+  const [applySettling, setApplySettling] = useState(false)
+  const applyGuestIdsRef = useRef([])
+
+  const setGuestAvailabilityLoading = useCallback((guestId, loading) => {
+    setGuestAvailabilityLoadingState((prev) => {
+      if (prev[guestId] === loading) return prev
+      return { ...prev, [guestId]: loading }
+    })
+  }, [])
+
+  const dateTimeConfiguring =
+    dateTimeApplying ||
+    applySettling ||
+    Object.values(guestAvailabilityLoading).some(Boolean)
+
+  // Only release the apply lock after times are written AND every guest grid finishes loading.
+  useEffect(() => {
+    if (!applySettling) return
+    const ids = applyGuestIdsRef.current
+    if (ids.length === 0) return
+    const allDone = ids.every((id) => guestAvailabilityLoading[id] === false)
+    if (!allDone) return
+
+    const timer = setTimeout(() => {
+      setApplySettling(false)
+      setDateTimeApplying(false)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [applySettling, guestAvailabilityLoading])
 
   const completeBooking = async () => {
     setSubmitting(true)
     setSubmitError(null)
+    setSubmitErrorDetail(null)
     try {
-      const saved = await submitBooking({ guests, dateTime, details })
-      setBookingRef(saved.ref)
+      const saved = await submitBooking({ guests, details })
+      const savedArr = Array.isArray(saved) ? saved : [saved]
+
+      // The backend may have auto-assigned a therapist. Update our local context
+      // so the Confirmation Page displays the actual assigned name instead of "No preference".
+      const bookedGuests = guests.filter((g) => g.confirmed || guests.length === 1)
+      setGuests((prev) =>
+        prev.map((g) => {
+          if (!(g.confirmed || guests.length === 1)) return g
+          const idx = bookedGuests.findIndex((bg) => bg.id === g.id)
+          const row = savedArr[idx]
+          if (row && row.therapist_id) {
+            return { ...g, therapist: { mode: 'name', therapistId: row.therapist_id } }
+          }
+          return g
+        })
+      )
+
+      const refs = savedArr.map((b) => b.ref)
+      setBookingRef(refs)
       setCompleted(true)
+      return { success: true }
     } catch (err) {
       setSubmitError(err.message)
+      setSubmitErrorDetail(err.detail || null)
+      return { success: false, error: err.message, detail: err.detail }
     } finally {
       setSubmitting(false)
     }
   }
 
+  const resetBooking = () => {
+    setGuests(initialGuests)
+    setNextId(2)
+    setActiveId(1)
+    setDetails({
+      name: '',
+      phone: '',
+      email: '',
+      note: '',
+      tipMode: '25',
+      tipCustom: '',
+      payment: 'prepay',
+      waiver: false,
+    })
+    setMaxStep(1)
+    setCompleted(false)
+    setSubmitting(false)
+    setSubmitError(null)
+    setSubmitErrorDetail(null)
+    setBookingRef(null)
+    setDateTimeShortfall(0)
+    setDateTimeApplying(false)
+    setApplySettling(false)
+    setGuestAvailabilityLoadingState({})
+  }
+
   const allConfirmed = guests.every((g) => g.confirmed)
+
+  // ---- copy to all ----
+  const copyServicesToAll = () => {
+    setGuests((prev) => {
+      const primarySel = prev[0].selection
+      if (!primarySel) return prev
+      return prev.map((g, i) =>
+        i === 0 ? g : { ...g, selection: JSON.parse(JSON.stringify(primarySel)), confirmed: true }
+      )
+    })
+    setActiveId(null)
+  }
+
+  const copyTherapistToAll = () => {
+    setGuests((prev) => {
+      const primaryTherapist = prev[0].therapist
+      return prev.map((g, i) => (i === 0 ? g : { ...g, therapist: { ...primaryTherapist } }))
+    })
+  }
+
+  const copyDateTimeToAll = async () => {
+    const snapshot = guestsRef.current
+    const primary = snapshot[0]
+    const dt = primary?.dateTime
+    if (!dt?.date || !dt?.time) return
+
+    setDateTimeShortfall(0)
+    setApplySettling(false)
+    setDateTimeApplying(true)
+    applyGuestIdsRef.current = snapshot.map((g) => g.id)
+    try {
+      const dateStr = getLocalDateStr(dt.date)
+      const claims = []
+      const dateTimeById = new Map()
+      const availabilityCache = new Map()
+
+      const loadAvailability = async (g) => {
+        const durationMin = selectionMinutes(g.selection)
+        const { therapistId, gender } = guestAvailabilityParams(g)
+        const key = availabilityFetchKey(dateStr, durationMin, therapistId, gender)
+        if (availabilityCache.has(key)) return availabilityCache.get(key)
+
+        const json = await fetchAvailability({ dateStr, durationMin, therapistId, gender })
+        availabilityCache.set(key, json)
+        return json
+      }
+
+      const assignTimes = (getJson) => {
+        claims.length = 0
+        dateTimeById.clear()
+
+        for (let i = 0; i < snapshot.length; i++) {
+          const g = snapshot[i]
+          const durationMin = selectionMinutes(g.selection)
+          const { therapistId, gender } = guestAvailabilityParams(g)
+
+          if (i > 0 && !dateTimeById.get(snapshot[i - 1].id)) {
+            dateTimeById.set(g.id, null)
+            continue
+          }
+
+          const json = getJson(g)
+          if (json?.closed) {
+            dateTimeById.set(g.id, null)
+            continue
+          }
+
+          // Prefer the same start time for each guest; only move forward when that guest's own pool cannot take it.
+          let time = dt.time
+
+          if (json && time) {
+            const { slots, unavailable } = computeGuestAvailability(json, {
+              dateStr,
+              durationMin,
+              therapistId,
+              gender,
+              claimedTherapistSlots: claims,
+              therapists,
+            })
+
+            if (i === 0) {
+              if (!slots.includes(dt.time) || unavailable.has(dt.time)) {
+                time = findNextAvailableSlot(slots, unavailable, parseAmPm(dt.time))
+              }
+            } else if (!slots.includes(time) || unavailable.has(time)) {
+              time = findNextAvailableSlot(slots, unavailable, parseAmPm(dt.time))
+            }
+          }
+
+          dateTimeById.set(g.id, time ?? null)
+          if (time) claims.push({ therapistId, gender, time, durationMin })
+        }
+      }
+
+      // Fetch each unique availability profile once, then assign staggered times.
+      const uniqueKeys = new Set()
+      for (const g of snapshot) {
+        const durationMin = selectionMinutes(g.selection)
+        const { therapistId, gender } = guestAvailabilityParams(g)
+        uniqueKeys.add(availabilityFetchKey(dateStr, durationMin, therapistId, gender))
+      }
+
+      await Promise.all(
+        [...uniqueKeys].map(async (key) => {
+          const g = snapshot.find((guest) => {
+            const durationMin = selectionMinutes(guest.selection)
+            const { therapistId, gender } = guestAvailabilityParams(guest)
+            return availabilityFetchKey(dateStr, durationMin, therapistId, gender) === key
+          })
+          await loadAvailability(g)
+        }),
+      )
+
+      const firstJson = availabilityCache.values().next().value
+      if (firstJson?.closed) {
+        setGuests((prev) =>
+          prev.map((guest) => ({
+            ...guest,
+            dateTime: { date: new Date(dt.date.getTime()), time: null },
+          })),
+        )
+        setDateTimeApplying(false)
+        setApplySettling(false)
+        return
+      }
+
+      assignTimes((g) => {
+        const durationMin = selectionMinutes(g.selection)
+        const { therapistId, gender } = guestAvailabilityParams(g)
+        const key = availabilityFetchKey(dateStr, durationMin, therapistId, gender)
+        return availabilityCache.get(key)
+      })
+
+      setGuests((prev) =>
+        prev.map((g) => {
+          const time = dateTimeById.get(g.id)
+          return {
+            ...g,
+            dateTime: {
+              date: new Date(dt.date.getTime()),
+              time: time ?? null,
+            },
+          }
+        }),
+      )
+      setDateTimeShortfall(snapshot.filter((g) => !dateTimeById.get(g.id)).length)
+      setGuestAvailabilityLoadingState(Object.fromEntries(snapshot.map((g) => [g.id, true])))
+      setApplySettling(true)
+    } catch {
+      const dateTimeById = new Map()
+
+      for (let i = 0; i < snapshot.length; i++) {
+        dateTimeById.set(snapshot[i].id, dt.time)
+      }
+
+      setGuests((prev) =>
+        prev.map((g) => ({
+          ...g,
+          dateTime: {
+            date: new Date(dt.date.getTime()),
+            time: dateTimeById.get(g.id) ?? null,
+          },
+        })),
+      )
+      setDateTimeShortfall(snapshot.filter((g) => !dateTimeById.get(g.id)).length)
+      setGuestAvailabilityLoadingState(Object.fromEntries(snapshot.map((g) => [g.id, true])))
+      setApplySettling(true)
+    }
+  }
 
   const value = useMemo(
     () => ({
@@ -209,9 +480,15 @@ export function BookingProvider({ children }) {
       editGuest,
       setTherapistMode,
       setTherapist,
-      dateTime,
-      setDate,
-      setTime,
+      setGuestDate,
+      setGuestTime,
+      copyServicesToAll,
+      copyTherapistToAll,
+      copyDateTimeToAll,
+      dateTimeApplying,
+      dateTimeConfiguring,
+      dateTimeShortfall,
+      setGuestAvailabilityLoading,
       details,
       patchDetails,
       maxStep,
@@ -220,10 +497,12 @@ export function BookingProvider({ children }) {
       completeBooking,
       submitting,
       submitError,
+      submitErrorDetail,
       bookingRef,
       allConfirmed,
+      resetBooking,
     }),
-  [guests, activeId, nextId, dateTime, details, maxStep, completed, allConfirmed, submitting, submitError, bookingRef],
+    [guests, activeId, nextId, details, maxStep, completed, allConfirmed, submitting, submitError, submitErrorDetail, bookingRef, dateTimeApplying, applySettling, guestAvailabilityLoading, dateTimeShortfall, therapists],
   )
 
   return (

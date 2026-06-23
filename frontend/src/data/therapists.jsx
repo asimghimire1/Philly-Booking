@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 
 // Legacy fallback in case Supabase is down (don't ship to prod with this as primary)
@@ -16,22 +16,45 @@ export function TherapistProvider({ children }) {
   const [therapists, setTherapists] = useState(FALLBACK_THERAPISTS)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const loadTherapists = async () => {
-      setLoading(true)
-      try {
-        const API_URL = import.meta.env.VITE_API_URL || ''
-        const response = await fetch(`${API_URL}/api/staff`)
-        if (!response.ok) throw new Error('Failed to load')
-        const { data } = await response.json()
-        setTherapists(data.map((s) => ({ id: s.id, name: s.name, gender: s.gender, role: s.role })))
-      } catch (err) {
-        console.error('Error loading therapists:', err)
-        setTherapists(FALLBACK_THERAPISTS)
-      }
-      setLoading(false)
+  const loadTherapists = useCallback(async () => {
+    setLoading(true)
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || ''
+      const response = await fetch(`${API_URL}/api/staff`)
+      if (!response.ok) throw new Error('Failed to load')
+      const { data } = await response.json()
+      setTherapists(data.map((s) => ({
+        id: s.id,
+        name: s.name,
+        gender: s.gender,
+        role: s.role,
+        descEn: s.role,   // role is English — used for English display
+        descZh: s.role,   // fallback until a descZh DB column is added
+      })))
+    } catch (err) {
+      console.error('Error loading therapists:', err)
+      setTherapists(FALLBACK_THERAPISTS)
     }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
     loadTherapists()
+    const onFocus = () => loadTherapists()
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadTherapists()
+    }
+
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+
+    const timer = setInterval(loadTherapists, 60000)
+
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+      clearInterval(timer)
+    }
   }, [])
 
   return <TherapistContext.Provider value={{ therapists, loading }}>{children}</TherapistContext.Provider>
@@ -43,10 +66,16 @@ export function useTherapists() {
   return ctx
 }
 
+export function findTherapistById(therapists, id) {
+  if (!id) return null
+  const liveMatch = Array.isArray(therapists) ? therapists.find((th) => th.id === id) : null
+  return liveMatch || FALLBACK_THERAPISTS.find((th) => th.id === id) || null
+}
+
 export const getTherapist = (id) => {
   // This is for synchronous access (bookings already loaded).
   // Falls back to a lookup via context if needed.
-  return FALLBACK_THERAPISTS.find((th) => th.id === id) || { id, name: 'Unknown', gender: 'male', role: '' }
+  return findTherapistById(FALLBACK_THERAPISTS, id) || { id, name: 'Unknown', gender: 'male', role: '' }
 }
 
 // Resolve a guest's preference to an actual practitioner for display — even
