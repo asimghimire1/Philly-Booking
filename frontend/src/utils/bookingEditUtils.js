@@ -94,10 +94,12 @@ export function hydrateTherapist(therapistId, partyTherapistLabel, staff = []) {
 
 export function hydrateEditState(row, staff = []) {
   const p = row.party?.[0] || {}
+  // Keep original name for saving, use display name for UI
   const guest = {
     bookingId: row.id,
     primary: true,
     guestName: p.name || 'Guest',
+    guestDisplayName: p.name === 'You' ? row.customer.name : p.name,
     selection: parseSelectionFromParty(p, row.durationMin),
     therapist: hydrateTherapist(row.therapistId, p.therapist, staff),
     dateTime: { date: parseDateStr(row.date), time: row.time },

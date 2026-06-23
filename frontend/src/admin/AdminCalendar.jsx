@@ -323,15 +323,15 @@ function DayView({ bookings, staff, availability, dayDate, onOpen, onGroup }) {
         <div className="grid" style={{ gridTemplateColumns: cols }}>
           <TimeGutter hours={hours} startHour={startHour} bodyH={bodyH} />
           {columns.map((c) => {
-            const items = apptsFor(c).map((a) => ({
-              id: a.key,
-              bookingId: a.booking.id,
-              status: a.booking.status,
-              title: a.guest.name,
-              sub: a.guest.service,
-              start: parseTime(a.booking.time),
-              dur: a.booking.durationMin || 60,
-            }))
+             const items = apptsFor(c).map((a) => ({
+               id: a.key,
+               bookingId: a.booking.id,
+               status: a.booking.status,
+               title: a.guest.name === 'You' ? a.booking.customer.name : a.guest.name,
+               sub: a.guest.service,
+               start: parseTime(a.booking.time),
+               dur: a.booking.durationMin || 60,
+             }))
             return (
               <div key={c.id} className="relative border-l border-slate-200" style={{ height: bodyH }}>
                 <HourLines hours={hours} startHour={startHour} />
@@ -476,21 +476,24 @@ function DayAgenda({ bookings, staff, dayDate, onOpen }) {
     <div>
       {groups.map(({ c, items }) => (
         <AgendaSection key={c.id} title={c.name} meta={`${items.length} appt${items.length > 1 ? 's' : ''}`}>
-          {items.map((a) => (
-            <AgendaCard
-              key={a.key}
-              status={a.booking.status}
-              title={a.guest.name}
-              sub={
-                a.guest.name === a.booking.customer.name
-                  ? a.guest.service
-                  : `${a.guest.service} · ${a.booking.customer.name}`
-              }
-              start={parseTime(a.booking.time)}
-              durationMin={a.booking.durationMin}
-              onClick={() => onOpen(a.booking.id)}
-            />
-          ))}
+          {items.map((a) => {
+            const guestDisplayName = a.guest.name === 'You' ? a.booking.customer.name : a.guest.name
+            return (
+              <AgendaCard
+                key={a.key}
+                status={a.booking.status}
+                title={guestDisplayName}
+                sub={
+                  guestDisplayName === a.booking.customer.name
+                    ? a.guest.service
+                    : `${a.guest.service} · ${a.booking.customer.name}`
+                }
+                start={parseTime(a.booking.time)}
+                durationMin={a.booking.durationMin}
+                onClick={() => onOpen(a.booking.id)}
+              />
+            )
+          })}
         </AgendaSection>
       ))}
     </div>

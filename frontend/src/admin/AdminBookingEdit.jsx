@@ -328,7 +328,7 @@ function EditForm() {
       {guest && (
         <Card>
           <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-4">
-            <p className="font-semibold text-navy">{guest.guestName}</p>
+             <p className="font-semibold text-navy">{guest.guestDisplayName || guest.guestName}</p>
             <p className="text-sm text-slate-500">
               {customer.name} ·{' '}
               {guest.dateTime?.time
@@ -473,7 +473,7 @@ export default function AdminBookingEdit() {
     <div className="animate-step">
       <PageHeading
         title="Edit guest booking"
-        subtitle={`${initial.customer.name} · ${initial.guests[0]?.guestName || 'Guest'} · ${initial.ref}`}
+        subtitle={`${initial.customer.name} · ${initial.guests[0]?.guestDisplayName || initial.guests[0]?.guestName || 'Guest'} · ${initial.ref}`}
       />
       <AdminEditProvider initial={initial}>
         <EditForm />

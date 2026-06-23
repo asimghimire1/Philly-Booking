@@ -93,18 +93,22 @@ export default function BookingDetailModal({ booking, onClose, onSetStatus, onEd
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Party ({booking.party.length})
               </h3>
-              <div className="space-y-2">
-                {booking.party.map((p, i) => (
-                  <div key={i} className="rounded-xl bg-slate-50 p-3 text-sm">
-                    <p className="font-medium text-navy">{p.name}</p>
-                    <p className="text-slate-500">{p.service}</p>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      Therapist: {p.therapist}
-                      {p.addons?.length ? ` · Add-ons: ${p.addons.join(', ')}` : ''}
-                    </p>
-                  </div>
-                ))}
-              </div>
+             <div className="space-y-2">
+               {booking.party.map((p, i) => {
+                 // Replace "You" with "Guest" for admin context
+                 const displayName = p.name === 'You' ? booking.customer.name : p.name
+                 return (
+                   <div key={i} className="rounded-xl bg-slate-50 p-3 text-sm">
+                     <p className="font-medium text-navy">{displayName}</p>
+                     <p className="text-slate-500">{p.service}</p>
+                     <p className="mt-0.5 text-xs text-slate-400">
+                       Therapist: {p.therapist}
+                       {p.addons?.length ? ` · Add-ons: ${p.addons.join(', ')}` : ''}
+                     </p>
+                   </div>
+                 )
+               })}
+             </div>
             </section>
 
             {booking.note && (
