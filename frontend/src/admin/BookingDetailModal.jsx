@@ -10,10 +10,10 @@ function StatusActions({ booking, onSet }) {
     <div className="flex flex-wrap gap-2">
       <button
         type="button"
-        disabled={booking.status === 'completed'}
+        disabled={booking.status === 'completed' || booking.status === 'cancelled'}
         onClick={() => onSet(booking.id, 'completed')}
         className={`${btn} ${
-          booking.status === 'completed'
+          booking.status === 'completed' || booking.status === 'cancelled'
             ? 'bg-slate-100 text-slate-400'
             : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
         }`}
@@ -21,13 +21,9 @@ function StatusActions({ booking, onSet }) {
         Mark completed
       </button>
       {booking.status === 'cancelled' ? (
-        <button
-          type="button"
-          onClick={() => onSet(booking.id, 'upcoming')}
-          className={`${btn} bg-teal/10 text-teal hover:bg-teal/20`}
-        >
-          Reopen
-        </button>
+        <span className="rounded-full bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-600">
+          Cancelled
+        </span>
       ) : (
         <button
           type="button"
@@ -134,7 +130,7 @@ export default function BookingDetailModal({ booking, onClose, onSetStatus, onEd
           <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
             <StatusActions booking={booking} onSet={onSetStatus} />
             <div className="flex items-center gap-2">
-              {onEdit && (
+              {onEdit && booking.status !== 'cancelled' && (
                 <button
                   type="button"
                   onClick={() => onEdit(booking.id)}

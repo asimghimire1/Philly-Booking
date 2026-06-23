@@ -305,11 +305,11 @@ function EditForm() {
       <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={status} />
         <span className="text-sm text-slate-500">{ref}</span>
-        {status === 'cancelled' && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
-            Cancelled — saving will keep this status; reopen from detail view if needed.
-          </span>
-        )}
+         {status === 'cancelled' && (
+           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+             Cancelled — saving will keep this status.
+           </span>
+         )}
       </div>
 
       {bookingGroupId && (
