@@ -393,6 +393,29 @@ router.put('/admin/bookings', async (req, res) => {
         return res.status(400).json({ error: 'MISSING_ID', detail: `Guest ${guestIndex + 1} is missing booking id.` });
       }
 
+      // Check if booking is completed or cancelled before allowing edits
+      const { data: currentBooking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('status')
+        .eq('id', row.id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      if (currentBooking?.status === 'completed') {
+        return res.status(409).json({
+          error: 'BOOKING_COMPLETED',
+          detail: `Cannot edit a completed booking.`,
+        });
+      }
+      
+      if (currentBooking?.status === 'cancelled') {
+        return res.status(409).json({
+          error: 'BOOKING_CANCELLED',
+          detail: `Cannot edit a cancelled booking.`,
+        });
+      }
+
       const b = {
         booking_date: row.booking_date,
         booking_time: row.booking_time,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import DatePicker from '../components/booking/DatePicker.jsx'
 import Dropdown from '../components/booking/Dropdown.jsx'
@@ -285,8 +285,19 @@ function EditForm() {
   const [error, setError] = useState(null)
   const [errorDetail, setErrorDetail] = useState(null)
 
-  const totals = editTotals(guests, details)
-  const canSave = guest && hasSelection(guest.selection) && guest.dateTime?.time && status !== 'completed'
+const totals = editTotals(guests, details)
+  const isLocked = status === 'completed' || status === 'cancelled'
+  const canSave = guest && hasSelection(guest.selection) && guest.dateTime?.time && !isLocked
+
+  // Auto-scroll to top when error appears
+  const prevErrorRef = useRef(null)
+  useEffect(() => {
+    const currentError = errorDetail || error
+    if (currentError && currentError !== prevErrorRef.current) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    prevErrorRef.current = currentError
+  }, [error, errorDetail])
 
   const handleSave = async () => {
     setSaving(true)
@@ -350,13 +361,13 @@ function EditForm() {
             <div>
               <SectionTitle>Services & add-ons</SectionTitle>
               <div className="mt-3">
-                <GuestServiceSection guest={guest} disabled={status === 'completed'} />
+<GuestServiceSection guest={guest} disabled={isLocked} />
               </div>
             </div>
             <div>
               <SectionTitle>Therapist</SectionTitle>
               <div className="mt-3">
-                <GuestTherapistSection guest={guest} disabled={status === 'completed'} />
+                <GuestTherapistSection guest={guest} disabled={isLocked} />
               </div>
             </div>
             <div className="relative z-10">
@@ -366,7 +377,7 @@ function EditForm() {
                   guest={guest}
                   excludeBookingIds={excludeBookingIds}
                   therapists={therapists}
-                  disabled={status === 'completed'}
+                  disabled={isLocked}
                 />
               </div>
             </div>
@@ -381,11 +392,11 @@ function EditForm() {
             <label className="mb-1 block text-sm font-medium text-slate-600">Note</label>
             <textarea
               value={details.note}
-              onChange={(e) => status !== 'completed' && patchDetails({ note: e.target.value })}
+              onChange={(e) => !isLocked && patchDetails({ note: e.target.value })}
               rows={3}
               className={`${fieldCls} resize-y`}
               placeholder="Customer note…"
-              disabled={status === 'completed'}
+              disabled={isLocked}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -396,18 +407,18 @@ function EditForm() {
                 min="0"
                 step="0.01"
                 value={details.tip}
-                onChange={(e) => status !== 'completed' && patchDetails({ tip: e.target.value })}
+                onChange={(e) => !isLocked && patchDetails({ tip: e.target.value })}
                 className={fieldCls}
-                disabled={status === 'completed'}
+                disabled={isLocked}
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600">Payment</label>
               <select
                 value={details.payment}
-                onChange={(e) => status !== 'completed' && patchDetails({ payment: e.target.value })}
+                onChange={(e) => !isLocked && patchDetails({ payment: e.target.value })}
                 className={fieldCls}
-                disabled={status === 'completed'}
+                disabled={isLocked}
               >
                 <option value="prepay">Prepay</option>
                 <option value="visit">Pay at visit</option>
