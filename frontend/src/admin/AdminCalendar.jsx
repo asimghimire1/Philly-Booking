@@ -59,15 +59,29 @@ function weekSunday(d) {
   return x
 }
 
+function effectiveStatus(status, date, time) {
+  const now = new Date()
+  const booking = new Date(`${date} ${time}`)
+
+  if (status === 'upcoming' && booking < now) {
+    return 'unresolved'
+  }
+
+  return status
+}
+
 const tone = (status) =>
   status === 'cancelled'
     ? 'bg-rose-400 hover:bg-rose-500'
     : status === 'completed'
       ? 'bg-emerald-600 hover:bg-emerald-700'
-      : 'bg-teal hover:bg-teal-600'
+      : status === 'unresolved'
+        ? 'bg-amber-500 hover:bg-amber-600'
+        : 'bg-teal hover:bg-teal-600'
 
 const LEGEND = [
   { label: 'Upcoming', cls: 'bg-teal' },
+  { label: 'Unresolved', cls: 'bg-amber-500' },
   { label: 'Completed', cls: 'bg-emerald-600' },
   { label: 'Cancelled', cls: 'bg-rose-400' },
 ]
@@ -89,7 +103,7 @@ function Block({ status, style, time, title, sub, strike, onClick }) {
       style={style}
       className={`absolute inset-x-1 flex flex-col overflow-hidden rounded-lg px-2 py-1 text-left text-white shadow-sm ring-1 ring-black/5 transition-colors ${tone(status)}`}
     >
-      <span className="text-[10px] leading-tight text-white/85">{time}</span>
+      <span className="pb-1 text-[10px] leading-tight text-white/85">{time}</span>
       <span className={`truncate text-xs font-semibold leading-tight ${strike ? 'line-through' : ''}`}>
         {title}
       </span>
@@ -207,7 +221,7 @@ function WeekView({ bookings, weekStart, onOpen, onGroup }) {
     const map = {}
     for (const b of bookings) {
       if (parseTime(b.time) == null) continue
-      ;(map[b.date] ??= []).push(b)
+        ; (map[b.date] ??= []).push(b)
     }
     return map
   }, [bookings])
@@ -234,8 +248,7 @@ function WeekView({ bookings, weekStart, onOpen, onGroup }) {
             const items = (byDate[toIso(d)] ?? []).map((b) => ({
               id: b.id,
               bookingId: b.id,
-              status: b.status,
-              date: b.date,
+              status: effectiveStatus(b.status, b.date, b.time),
               time: b.time,
               title: b.customer.name,
               sub:
@@ -325,17 +338,20 @@ function DayView({ bookings, staff, availability, dayDate, onOpen, onGroup }) {
         <div className="grid" style={{ gridTemplateColumns: cols }}>
           <TimeGutter hours={hours} startHour={startHour} bodyH={bodyH} />
           {columns.map((c) => {
-             const items = apptsFor(c).map((a) => ({
-               id: a.key,
-               bookingId: a.booking.id,
-               status: a.booking.status,
-               date: a.booking.date,
-               time: a.booking.time,
-               title: a.guest.name === 'You' ? a.booking.customer.name : a.guest.name,
-               sub: a.guest.service,
-               start: parseTime(a.booking.time),
-               dur: a.booking.durationMin || 60,
-             }))
+            const items = apptsFor(c).map((a) => ({
+              id: a.key,
+              bookingId: a.booking.id,
+              status: effectiveStatus(
+                a.booking.status,
+                a.booking.date,
+                a.booking.time
+              ),
+              time: a.booking.time,
+              title: a.guest.name === 'You' ? a.booking.customer.name : a.guest.name,
+              sub: a.guest.service,
+              start: parseTime(a.booking.time),
+              dur: a.booking.durationMin || 60,
+            }))
             return (
               <div key={c.id} className="relative border-l border-slate-200" style={{ height: bodyH }}>
                 <HourLines hours={hours} startHour={startHour} />
@@ -354,11 +370,23 @@ const timeRange = (startMin, durationMin) =>
   `${fmtMin(startMin)} - ${fmtMin(startMin + (durationMin || 60))}`
 
 const cardTone = (status) =>
-  status === 'cancelled' ? 'bg-rose-400' : status === 'completed' ? 'bg-emerald-600' : 'bg-teal'
+  status === 'cancelled'
+    ? 'bg-rose-400'
+    : status === 'completed'
+      ? 'bg-emerald-600'
+      : status === 'unresolved'
+        ? 'bg-amber-500'
+        : 'bg-teal'
 
 function AgendaCard({ status, title, sub, start, durationMin, onClick }) {
   const badge =
-    status === 'cancelled' ? 'Cancelled' : status === 'completed' ? 'Completed' : null
+    status === 'cancelled'
+      ? 'Cancelled'
+      : status === 'completed'
+        ? 'Completed'
+        : status === 'unresolved'
+          ? 'Unresolved'
+          : null
   return (
     <button
       type="button"
@@ -404,7 +432,7 @@ function WeekAgenda({ bookings, weekStart, onOpen }) {
   const byDate = {}
   for (const b of bookings) {
     if (parseTime(b.time) == null) continue
-    ;(byDate[b.date] ??= []).push(b)
+      ; (byDate[b.date] ??= []).push(b)
   }
   const todayIso = toIso(new Date())
   const sections = days
@@ -432,7 +460,11 @@ function WeekAgenda({ bookings, weekStart, onOpen }) {
           {list.map((b) => (
             <AgendaCard
               key={b.id}
-              status={b.status}
+              status={effectiveStatus(
+                b.status,
+                b.date,
+                b.time
+              )}
               title={b.customer.name}
               sub={
                 b.party.length > 1
@@ -485,7 +517,11 @@ function DayAgenda({ bookings, staff, dayDate, onOpen }) {
             return (
               <AgendaCard
                 key={a.key}
-                status={a.booking.status}
+                status={effectiveStatus(
+                  a.booking.status,
+                  a.booking.date,
+                  a.booking.time
+                )}
                 title={guestDisplayName}
                 sub={
                   guestDisplayName === a.booking.customer.name
@@ -605,9 +641,8 @@ export default function AdminCalendar() {
     <button
       type="button"
       onClick={() => setView(id)}
-      className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-        view === id ? 'bg-white text-navy shadow-sm' : 'text-slate-500 hover:text-navy'
-      }`}
+      className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${view === id ? 'bg-white text-navy shadow-sm' : 'text-slate-500 hover:text-navy'
+        }`}
     >
       {label}
     </button>

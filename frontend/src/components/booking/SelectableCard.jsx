@@ -1,5 +1,6 @@
 // Radio-style selectable card for techniques, fixed services, and add-ons.
 // With `readOnly` it renders as a non-interactive info card (no radio).
+// With `disabled` it renders as a non-interactive card with disabled styling.
 export default function SelectableCard({
   selected,
   onClick,
@@ -8,16 +9,17 @@ export default function SelectableCard({
   priceLabel,
   priceFree,
   readOnly,
+  disabled,
 }) {
   const inner = (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="font-medium text-navy">{title}</p>
-        {desc && <p className="mt-0.5 text-sm text-slate-500">{desc}</p>}
+        <p className={`font-medium ${disabled ? 'text-slate-400' : 'text-navy'}`}>{title}</p>
+        {desc && <p className={`mt-0.5 text-sm ${disabled ? 'text-slate-300' : 'text-slate-500'}`}>{desc}</p>}
         {priceLabel && (
           <p
             className={`mt-1 text-sm font-semibold ${
-              priceFree ? 'text-emerald-600' : 'text-teal'
+              priceFree ? 'text-emerald-600' : disabled ? 'text-slate-400' : 'text-teal'
             }`}
           >
             {priceLabel}
@@ -25,7 +27,7 @@ export default function SelectableCard({
         )}
       </div>
 
-      {!readOnly && (
+      {!readOnly && !disabled && (
         <span
           className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
             selected ? 'border-teal' : 'border-slate-300'
@@ -37,9 +39,11 @@ export default function SelectableCard({
     </div>
   )
 
-  if (readOnly) {
+  if (readOnly || disabled) {
     return (
-      <div className="w-full rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-left">
+      <div className={`w-full rounded-2xl border p-4 text-left ${
+        disabled ? 'border-slate-200 bg-slate-50/60' : 'border-slate-200 bg-slate-50/60'
+      }`}>
         {inner}
       </div>
     )

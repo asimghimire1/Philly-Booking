@@ -24,6 +24,10 @@ function StatusActions({ booking, onSet }) {
         <span className="rounded-full bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-600">
           Cancelled
         </span>
+      ) : booking.status === 'completed' ? (
+        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+          Completed
+        </span>
       ) : (
         <button
           type="button"
@@ -130,7 +134,7 @@ export default function BookingDetailModal({ booking, onClose, onSetStatus, onEd
           <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
             <StatusActions booking={booking} onSet={onSetStatus} />
             <div className="flex items-center gap-2">
-              {onEdit && booking.status !== 'cancelled' && (
+              {onEdit && booking.status !== 'cancelled' && booking.status !== 'completed' && (
                 <button
                   type="button"
                   onClick={() => onEdit(booking.id)}

@@ -13,7 +13,7 @@ const sameDay = (a, b) =>
 
 // Lightweight, dependency-free calendar dropdown. Past days are disabled and
 // the long, localized date is shown on the trigger.
-export default function DatePicker({ value, onChange, locale }) {
+export default function DatePicker({ value, onChange, locale, disabled }) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState(
     () => new Date(value.getFullYear(), value.getMonth(), 1),
@@ -94,15 +94,20 @@ export default function DatePicker({ value, onChange, locale }) {
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-colors hover:border-teal/50"
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+        className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+          disabled
+            ? 'cursor-not-allowed border-slate-200 bg-slate-50'
+            : 'border-slate-200 bg-white hover:border-teal/50'
+        }`}
       >
         <span className="flex min-w-0 items-center gap-3">
-          <svg className="h-5 w-5 shrink-0 text-teal" viewBox="0 0 24 24" fill="none">
+          <svg className={`h-5 w-5 shrink-0 ${disabled ? 'text-slate-400' : 'text-teal'}`} viewBox="0 0 24 24" fill="none">
             <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
             <path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
-          <span className="truncate font-medium text-navy">
+          <span className={`truncate font-medium ${disabled ? 'text-slate-400' : 'text-navy'}`}>
             {longFmt.format(value)}
           </span>
         </span>

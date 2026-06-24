@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 // A styled dropdown that replaces the default browser <select> so combo slots
 // match the rest of the booking UI. Opens a floating, scrollable option list
 // with a teal-highlighted current choice; closes on outside click or Escape.
-export default function Dropdown({ value, onChange, options, placeholder }) {
+export default function Dropdown({ value, onChange, options, placeholder, disabled }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open || disabled) return
     const onDown = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
     }
@@ -19,7 +19,7 @@ export default function Dropdown({ value, onChange, options, placeholder }) {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
     }
-  }, [open])
+  }, [open, disabled])
 
   const selected = options.find((o) => o.id === value)
 
@@ -27,18 +27,25 @@ export default function Dropdown({ value, onChange, options, placeholder }) {
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => !disabled && setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex w-full items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3 text-left text-sm transition-all duration-200 ${
-          open
-            ? 'border-teal ring-2 ring-teal/20'
-            : 'border-slate-200 hover:border-slate-300'
+        disabled={disabled}
+        className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all duration-200 ${
+          disabled
+            ? 'cursor-not-allowed border-slate-200 bg-slate-50'
+            : open
+              ? 'border-teal ring-2 ring-teal/20'
+              : 'border-slate-200 bg-white hover:border-slate-300'
         }`}
       >
         <span
           className={`min-w-0 truncate ${
-            selected ? 'font-medium text-navy' : 'text-slate-400'
+            disabled
+              ? 'text-slate-400'
+              : selected
+                ? 'font-medium text-navy'
+                : 'text-slate-400'
           }`}
         >
           {selected ? selected.label : placeholder}
@@ -60,7 +67,7 @@ export default function Dropdown({ value, onChange, options, placeholder }) {
         </svg>
       </button>
 
-      {open && (
+      {open && !disabled && (
         <ul
           role="listbox"
           className="animate-fade absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-navy/10"

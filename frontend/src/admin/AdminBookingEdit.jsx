@@ -39,7 +39,7 @@ function SectionTitle({ children }) {
   )
 }
 
-function GuestServiceSection({ guest }) {
+function GuestServiceSection({ guest, disabled }) {
   const {
     setMode,
     setCategory,
@@ -56,10 +56,10 @@ function GuestServiceSection({ guest }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-2">
-        <Pill active={sel.mode === 'single'} onClick={() => setMode(id, 'single')}>
+        <Pill active={sel.mode === 'single'} onClick={() => !disabled && setMode(id, 'single')} disabled={disabled}>
           Single
         </Pill>
-        <Pill active={sel.mode === 'combo'} onClick={() => setMode(id, 'combo')}>
+        <Pill active={sel.mode === 'combo'} onClick={() => !disabled && setMode(id, 'combo')} disabled={disabled}>
           Combo
         </Pill>
       </div>
@@ -70,7 +70,7 @@ function GuestServiceSection({ guest }) {
             <SectionTitle>Category</SectionTitle>
             <div className="mt-2 flex flex-wrap gap-2">
               {categories.map((c) => (
-                <Pill key={c.id} active={sel.categoryId === c.id} onClick={() => setCategory(id, c.id)}>
+                <Pill key={c.id} active={sel.categoryId === c.id} onClick={() => !disabled && setCategory(id, c.id)} disabled={disabled}>
                   {bilingual(c)}
                 </Pill>
               ))}
@@ -82,7 +82,7 @@ function GuestServiceSection({ guest }) {
               <SectionTitle>Duration</SectionTitle>
               <div className="mt-2 flex flex-wrap gap-2">
                 {durations.map((d) => (
-                  <Pill key={d.id} active={sel.durationId === d.id} onClick={() => setDuration(id, d.id)}>
+                  <Pill key={d.id} active={sel.durationId === d.id} onClick={() => !disabled && setDuration(id, d.id)} disabled={disabled}>
                     {d.pill} · ${d.price}
                   </Pill>
                 ))}
@@ -97,7 +97,8 @@ function GuestServiceSection({ guest }) {
                 <SelectableCard
                   key={item.id}
                   selected={sel.pickId === item.id}
-                  onClick={() => setPick(id, item.id)}
+                  onClick={() => !disabled && setPick(id, item.id)}
+                  disabled={disabled}
                   title={item.nameEn}
                   desc={cat.type === 'fixed' ? `${item.min} min · $${item.price}` : item.descEn}
                   priceLabel={cat.type === 'fixed' ? `$${item.price}` : undefined}
@@ -112,7 +113,7 @@ function GuestServiceSection({ guest }) {
             <SectionTitle>Combo size</SectionTitle>
             <div className="mt-2 flex flex-wrap gap-2">
               {combos.map((c) => (
-                <Pill key={c.id} active={sel.comboId === c.id} onClick={() => setCombo(id, c.id)}>
+                <Pill key={c.id} active={sel.comboId === c.id} onClick={() => !disabled && setCombo(id, c.id)} disabled={disabled}>
                   {c.nameEn} · ${c.price}
                 </Pill>
               ))}
@@ -125,9 +126,10 @@ function GuestServiceSection({ guest }) {
                 <Dropdown
                   key={i}
                   value={sel.slots[i]}
-                  onChange={(v) => updateSlot(id, i, v)}
+                  onChange={(v) => !disabled && updateSlot(id, i, v)}
                   placeholder={`Service ${i + 1}`}
                   options={comboOptions.map((o) => ({ id: o.id, label: o.nameEn }))}
+                  disabled={disabled}
                 />
               ))}
             </div>
@@ -142,7 +144,8 @@ function GuestServiceSection({ guest }) {
             <SelectableCard
               key={a.id}
               selected={sel.addonIds.includes(a.id)}
-              onClick={() => toggleAddon(id, a.id)}
+              onClick={() => !disabled && toggleAddon(id, a.id)}
+              disabled={disabled}
               title={a.nameEn}
               desc={a.descEn}
               priceLabel={a.free ? 'Free' : `+$${a.price}`}
@@ -155,7 +158,7 @@ function GuestServiceSection({ guest }) {
   )
 }
 
-function GuestTherapistSection({ guest }) {
+function GuestTherapistSection({ guest, disabled }) {
   const { setTherapistMode, setTherapist } = useAdminEdit()
   const { therapists } = useTherapists()
   const pref = guest.therapist ?? { mode: 'none', therapistId: null }
@@ -172,7 +175,7 @@ function GuestTherapistSection({ guest }) {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {THERAPIST_MODES.map((m) => (
-          <Pill key={m} active={pref.mode === m} onClick={() => setTherapistMode(id, m)}>
+          <Pill key={m} active={pref.mode === m} onClick={() => !disabled && setTherapistMode(id, m)} disabled={disabled}>
             {m === 'none' ? 'No preference' : m === 'name' ? 'Pick by name' : m.charAt(0).toUpperCase() + m.slice(1)}
           </Pill>
         ))}
@@ -183,7 +186,8 @@ function GuestTherapistSection({ guest }) {
             <SelectableCard
               key={th.id}
               selected={pref.therapistId === th.id}
-              onClick={() => setTherapist(id, th.id)}
+              onClick={() => !disabled && setTherapist(id, th.id)}
+              disabled={disabled}
               title={th.name}
               desc={`${th.gender} · ${th.role}`}
             />
@@ -194,7 +198,7 @@ function GuestTherapistSection({ guest }) {
   )
 }
 
-function GuestDateTimeSection({ guest, excludeBookingIds, therapists }) {
+function GuestDateTimeSection({ guest, excludeBookingIds, therapists, disabled }) {
   const { setGuestDate, setGuestTime } = useAdminEdit()
   const id = guest.bookingId
   const durationMin = selectionMinutes(guest.selection)
@@ -218,7 +222,8 @@ function GuestDateTimeSection({ guest, excludeBookingIds, therapists }) {
         <div className="mt-2">
           <DatePicker
             value={guest.dateTime?.date ? new Date(guest.dateTime.date) : new Date()}
-            onChange={(date) => setGuestDate(id, date)}
+            onChange={(date) => !disabled && setGuestDate(id, date)}
+            disabled={disabled}
           />
         </div>
       </div>
@@ -248,12 +253,12 @@ function GuestDateTimeSection({ guest, excludeBookingIds, therapists }) {
                 <button
                   key={slot}
                   type="button"
-                  disabled={off}
-                  onClick={() => setGuestTime(id, slot)}
+                  disabled={off || disabled}
+                  onClick={() => !disabled && setGuestTime(id, slot)}
                   className={`rounded-xl border px-1 py-2 text-center text-sm font-medium transition-colors ${
                     selected
                       ? 'border-navy bg-navy text-white'
-                      : off
+                      : off || disabled
                         ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 line-through'
                         : 'border-slate-200 bg-white text-navy hover:border-teal/50'
                   }`}
@@ -281,7 +286,7 @@ function EditForm() {
   const [errorDetail, setErrorDetail] = useState(null)
 
   const totals = editTotals(guests, details)
-  const canSave = guest && hasSelection(guest.selection) && guest.dateTime?.time
+  const canSave = guest && hasSelection(guest.selection) && guest.dateTime?.time && status !== 'completed'
 
   const handleSave = async () => {
     setSaving(true)
@@ -304,12 +309,17 @@ function EditForm() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={status} date={guest?.dateTime?.date} time={guest?.dateTime?.time} />
-        <span className="text-sm text-slate-500">{ref}</span>
-         {status === 'cancelled' && (
-           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
-             Cancelled — saving will keep this status.
-           </span>
-         )}
+         <span className="text-sm text-slate-500">{ref}</span>
+          {status === 'cancelled' && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+              Cancelled — saving will keep this status.
+            </span>
+          )}
+          {status === 'completed' && (
+            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+              Completed — cannot be edited.
+            </span>
+          )}
       </div>
 
       {bookingGroupId && (
@@ -340,13 +350,13 @@ function EditForm() {
             <div>
               <SectionTitle>Services & add-ons</SectionTitle>
               <div className="mt-3">
-                <GuestServiceSection guest={guest} />
+                <GuestServiceSection guest={guest} disabled={status === 'completed'} />
               </div>
             </div>
             <div>
               <SectionTitle>Therapist</SectionTitle>
               <div className="mt-3">
-                <GuestTherapistSection guest={guest} />
+                <GuestTherapistSection guest={guest} disabled={status === 'completed'} />
               </div>
             </div>
             <div className="relative z-10">
@@ -356,6 +366,7 @@ function EditForm() {
                   guest={guest}
                   excludeBookingIds={excludeBookingIds}
                   therapists={therapists}
+                  disabled={status === 'completed'}
                 />
               </div>
             </div>
@@ -370,10 +381,11 @@ function EditForm() {
             <label className="mb-1 block text-sm font-medium text-slate-600">Note</label>
             <textarea
               value={details.note}
-              onChange={(e) => patchDetails({ note: e.target.value })}
+              onChange={(e) => status !== 'completed' && patchDetails({ note: e.target.value })}
               rows={3}
               className={`${fieldCls} resize-y`}
               placeholder="Customer note…"
+              disabled={status === 'completed'}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -384,16 +396,18 @@ function EditForm() {
                 min="0"
                 step="0.01"
                 value={details.tip}
-                onChange={(e) => patchDetails({ tip: e.target.value })}
+                onChange={(e) => status !== 'completed' && patchDetails({ tip: e.target.value })}
                 className={fieldCls}
+                disabled={status === 'completed'}
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600">Payment</label>
               <select
                 value={details.payment}
-                onChange={(e) => patchDetails({ payment: e.target.value })}
+                onChange={(e) => status !== 'completed' && patchDetails({ payment: e.target.value })}
                 className={fieldCls}
+                disabled={status === 'completed'}
               >
                 <option value="prepay">Prepay</option>
                 <option value="visit">Pay at visit</option>
