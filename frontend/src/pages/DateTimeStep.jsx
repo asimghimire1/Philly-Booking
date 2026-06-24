@@ -11,7 +11,7 @@ import { useTherapists } from '../data/therapists.jsx'
 import { getLocalDateStr, parseAmPm, findNextAvailableSlot } from '../utils/datetime.js'
 import { validatePartySchedule, formatScheduleError } from '../utils/scheduleValidation.js'
 
-function SectionLabel({ children }) {
+function SectionLabel({ children }) { 
   return <p className="text-sm font-medium text-slate-600">{children}</p>
 }
 
@@ -38,12 +38,11 @@ function GuestDateTimePicker({ guest, name, avatar, primary, showHeader, guests,
   const guestDateStr = guest.dateTime?.date ? getLocalDateStr(guest.dateTime.date) : ''
   const partyStartedOnDate = guests.some(
     (other, idx) =>
-      idx !== guestIndex &&
+      idx < guestIndex &&
       other.dateTime?.date &&
       other.dateTime?.time &&
       getLocalDateStr(other.dateTime.date) === guestDateStr,
   )
-  const needsManualTime = guest.dateTime?.date && !guest.dateTime?.time && partyStartedOnDate
 
   const claimedTherapistSlots = useMemo(() => {
     return guests
@@ -89,6 +88,13 @@ function GuestDateTimePicker({ guest, name, avatar, primary, showHeader, guests,
       }
     }
   }, [slots, unavailable, guest.dateTime?.time, guest.id, setGuestTime, dateTimeConfiguring])
+
+  // Show warning if no slots are available OR all slots are disabled on a date where other guests have started
+  const needsManualTime =
+    guest.dateTime?.date &&
+    !guest.dateTime?.time &&
+    partyStartedOnDate &&
+    (slots.length === 0 || (slots.length > 0 && unavailable.size === slots.length))
 
   return (
     <div className={`space-y-5 rounded-2xl border p-5 bg-white shadow-sm hover:shadow-md transition-shadow ${hasScheduleConflict ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-200'
@@ -200,19 +206,9 @@ export default function DateTimeStep() {
 
   useEffect(() => {
     const bumpRefresh = () => setRefreshTick((n) => n + 1)
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') bumpRefresh()
-    }
+    const timer = setInterval(bumpRefresh, 120000) // Refresh every 2 minutes
 
-    window.addEventListener('focus', bumpRefresh)
-    document.addEventListener('visibilitychange', onVisibility)
-    const timer = setInterval(bumpRefresh, 60000)
-
-    return () => {
-      window.removeEventListener('focus', bumpRefresh)
-      document.removeEventListener('visibilitychange', onVisibility)
-      clearInterval(timer)
-    }
+    return () => clearInterval(timer)
   }, [])
 
   const nameOf = (g, i) =>

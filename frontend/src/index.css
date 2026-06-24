@@ -146,6 +146,21 @@ button:disabled {
   animation: ring-pulse 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
+/* Button text wrap for small screens (350px and below) */
+@media (max-width: 350px) {
+  .btn-wrap-text {
+    white-space: normal;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+}
+
+/* Ensure button text can wrap */
+.btn-wrap-text {
+  display: block;
+  text-align: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

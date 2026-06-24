@@ -31,9 +31,8 @@ function SectionLabel({ children }) {
 function Avatar({ text, primary }) {
   return (
     <span
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${
-        primary ? 'bg-teal' : 'bg-navy'
-      }`}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${primary ? 'bg-teal' : 'bg-navy'
+        }`}
     >
       {text}
     </span>
@@ -201,11 +200,10 @@ function GuestEditor({ guest, name, avatar, primary, showHeader, showConfirm }) 
               {Array.from({ length: getCombo(sel.comboId)?.slots ?? 0 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-                      sel.slots[i]
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${sel.slots[i]
                         ? 'bg-teal text-white'
                         : 'bg-slate-100 text-slate-400'
-                    }`}
+                      }`}
                   >
                     {i + 1}
                   </span>
@@ -253,13 +251,14 @@ function GuestEditor({ guest, name, avatar, primary, showHeader, showConfirm }) 
           type="button"
           disabled={!hasSelection(sel)}
           onClick={() => confirmGuest(guest.id)}
-          className={`w-full rounded-full py-3.5 font-semibold text-white shadow-sm transition-all duration-200 ${
-            hasSelection(sel)
+          className={`w-full rounded-2xl py-3.5 font-semibold text-white shadow-sm transition-all duration-200 ${hasSelection(sel)
               ? 'bg-teal hover:bg-teal-600 hover:shadow-md active:scale-[0.98]'
               : 'cursor-not-allowed bg-slate-300'
-          }`}
+            }`}
         >
-          {t('services.confirmGuest', { guest: name })}
+          <span className="btn-wrap-text px-2">
+            {t('services.confirmGuest', { guest: name })}
+          </span>
         </button>
       )}
     </div>
@@ -330,13 +329,19 @@ export default function ServicesStep() {
   // When the active guest changes (e.g. after confirming one), bring the newly
   // opened editor into view so the next guest appears right where you are.
   const activeRef = useRef(null)
+  const applyAllRef = useRef(null)
   const prevActive = useRef(activeId)
   useEffect(() => {
     if (prevActive.current !== activeId && activeId != null) {
-      activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      // If first guest was just confirmed, scroll to show "Apply to all guests" button
+      if (prevActive.current === 1 && guests[0]?.confirmed) {
+        applyAllRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
     }
     prevActive.current = activeId
-  }, [activeId])
+  }, [activeId, guests])
 
   const nameOf = (g, i) =>
     g.primary ? t('guest.primaryName') : `${t('guest.label')} ${i + 1}`
@@ -396,7 +401,7 @@ export default function ServicesStep() {
             return (
               <div key={guest.id} className="space-y-3">
                 {node}
-                <div className="flex justify-end pr-2">
+                <div className="flex justify-end pr-2" ref={applyAllRef}>
                   <button
                     type="button"
                     onClick={copyServicesToAll}
