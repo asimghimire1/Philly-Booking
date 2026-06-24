@@ -48,19 +48,33 @@ export function StatCard({ label, value, sublabel, icon, tone = 'teal' }) {
 
 const STATUS_STYLES = {
   upcoming: 'bg-teal/10 text-teal',
+  unresolved: 'bg-amber-100 text-amber-700',
   completed: 'bg-emerald-100 text-emerald-600',
   cancelled: 'bg-rose-100 text-rose-500',
 }
 
-export function StatusBadge({ status }) {
+// Get current datetime for comparison
+function nowIso() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}T${h}:${min}`
+}
+
+export function StatusBadge({ status, date, time }) {
+  // Compute effective status: if upcoming but time has passed, show as unresolved
+  const now = nowIso()
+  const effectiveStatus = (status === 'upcoming' && date + 'T' + time < now) ? 'unresolved' : status
   return (
     <span
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
-        STATUS_STYLES[status] ?? 'bg-slate-100 text-slate-500'
+        STATUS_STYLES[effectiveStatus] ?? 'bg-slate-100 text-slate-500'
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {status}
+      {effectiveStatus}
     </span>
   )
 }

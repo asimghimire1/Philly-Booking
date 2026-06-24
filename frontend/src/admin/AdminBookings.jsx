@@ -4,7 +4,17 @@ import { useAdminData } from './data.jsx'
 import BookingDetailModal from './BookingDetailModal.jsx'
 import { Card, PageHeading, StatusBadge, PaymentBadge, Initials, fieldCls, fmtDate, money } from './ui.jsx'
 
-const FILTERS = ['all', 'upcoming', 'completed', 'cancelled']
+// Get current datetime as ISO string for comparison
+function nowIso() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}T${h}:${min}`
+}
+
+const FILTERS = ['all', 'upcoming', 'unresolved', 'completed', 'cancelled']
 
 export default function AdminBookings() {
   const { bookings, setBookingStatus } = useAdminData()
@@ -13,16 +23,34 @@ export default function AdminBookings() {
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState(null)
 
+const now = nowIso()
+
   const counts = useMemo(() => {
-    const c = { all: bookings.length, upcoming: 0, completed: 0, cancelled: 0 }
-    for (const b of bookings) c[b.status]++
+    const c = { all: bookings.length, upcoming: 0, unresolved: 0, completed: 0, cancelled: 0 }
+    for (const b of bookings) {
+      // Only count upcoming if booking time is in the future
+      if (b.status === 'upcoming' && b.date + 'T' + b.time >= now) {
+        c.upcoming++
+      }
+      // Unresolved: past time but not completed
+      if (b.status !== 'completed' && b.status !== 'cancelled' && b.date + 'T' + b.time < now) {
+        c.unresolved++
+      }
+      if (b.status === 'completed') c.completed++
+      if (b.status === 'cancelled') c.cancelled++
+    }
     return c
-  }, [bookings])
+  }, [bookings, now])
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     return bookings
-      .filter((b) => (filter === 'all' ? true : b.status === filter))
+      .filter((b) => {
+        if (filter === 'all') return true
+        if (filter === 'upcoming') return b.status === 'upcoming' && b.date + 'T' + b.time >= now
+        if (filter === 'unresolved') return b.status !== 'completed' && b.status !== 'cancelled' && b.date + 'T' + b.time < now
+        return b.status === filter
+      })
       .filter((b) =>
         !q
           ? true
@@ -32,7 +60,7 @@ export default function AdminBookings() {
             b.customer.email.toLowerCase().includes(q),
       )
       .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1))
-  }, [bookings, filter, query])
+  }, [bookings, filter, query, now])
 
   const open = bookings.find((b) => b.id === openId)
   const total = (b) => b.servicesTotal + b.addonsTotal + b.tip
@@ -105,7 +133,7 @@ export default function AdminBookings() {
                     <PaymentBadge payment={b.payment} />
                   </span>
                 </div>
-                <StatusBadge status={b.status} />
+                <StatusBadge status={b.status} date={b.date} time={b.time} />
                 <button
                   type="button"
                   onClick={() => setOpenId(b.id)}

@@ -64,7 +64,7 @@ export default function BookingDetailModal({ booking, onClose, onSetStatus, onEd
                 </p>
               </div>
             </div>
-            <StatusBadge status={booking.status} />
+            <StatusBadge status={booking.status} date={booking.date} time={booking.time} />
           </div>
 
           <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">

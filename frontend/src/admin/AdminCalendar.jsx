@@ -235,6 +235,8 @@ function WeekView({ bookings, weekStart, onOpen, onGroup }) {
               id: b.id,
               bookingId: b.id,
               status: b.status,
+              date: b.date,
+              time: b.time,
               title: b.customer.name,
               sub:
                 b.party.length > 1
@@ -327,6 +329,8 @@ function DayView({ bookings, staff, availability, dayDate, onOpen, onGroup }) {
                id: a.key,
                bookingId: a.booking.id,
                status: a.booking.status,
+               date: a.booking.date,
+               time: a.booking.time,
                title: a.guest.name === 'You' ? a.booking.customer.name : a.guest.name,
                sub: a.guest.service,
                start: parseTime(a.booking.time),
@@ -554,7 +558,11 @@ function OverlapModal({ items, onClose, onPick }) {
                       {timeRange(it.start, it.dur)} · {it.sub}
                     </p>
                   </div>
-                  <StatusBadge status={it.status} />
+                  <StatusBadge
+                    status={it.status}
+                    date={it.date}
+                    time={it.time}
+                  />
                   <svg className="h-5 w-5 shrink-0 text-slate-300" viewBox="0 0 24 24" fill="none">
                     <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

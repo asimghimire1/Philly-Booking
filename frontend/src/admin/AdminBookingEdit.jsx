@@ -303,7 +303,7 @@ function EditForm() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
-        <StatusBadge status={status} />
+        <StatusBadge status={status} date={guest?.dateTime?.date} time={guest?.dateTime?.time} />
         <span className="text-sm text-slate-500">{ref}</span>
          {status === 'cancelled' && (
            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">

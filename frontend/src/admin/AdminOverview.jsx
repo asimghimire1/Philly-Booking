@@ -10,25 +10,42 @@ function todayIso() {
   return `${d.getFullYear()}-${m}-${day}`
 }
 
+// Get current datetime for comparison
+function nowIso() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}T${h}:${min}`
+}
+
 export default function AdminOverview() {
   const { bookings, staff } = useAdminData()
   const today = todayIso()
+  const now = nowIso()
 
   const stats = useMemo(() => {
     const upcoming = bookings.filter((b) => b.status === 'upcoming')
     const todays = upcoming
       .filter((b) => b.date === today)
       .sort((a, b) => a.time.localeCompare(b.time))
+    // Unresolved: past time but not completed
+    const unresolved = bookings.filter(
+      (b) => b.status !== 'completed' && b.status !== 'cancelled' && b.date + 'T' + b.time < now
+    )
+    // Revenue: only completed bookings
     const revenue = bookings
-      .filter((b) => b.status !== 'cancelled')
+      .filter((b) => b.status === 'completed')
       .reduce((s, b) => s + b.servicesTotal + b.addonsTotal + b.tip, 0)
     return {
       todays,
       upcomingCount: upcoming.length,
+      unresolvedCount: unresolved.length,
       activeStaff: staff.filter((s) => s.active).length,
       revenue,
     }
-  }, [bookings, staff, today])
+  }, [bookings, staff, today, now])
 
   const icon = (d) => (
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -40,7 +57,7 @@ export default function AdminOverview() {
     <div className="animate-step">
       <PageHeading title="Overview" subtitle="Today at a glance" />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Today's appointments"
           value={stats.todays.length}
@@ -56,6 +73,13 @@ export default function AdminOverview() {
           icon={icon('M5 4h14a1 1 0 011 1v14l-3-2-3 2-3-2-3 2V5a1 1 0 011-1z')}
         />
         <StatCard
+          label="Unresolved"
+          value={stats.unresolvedCount}
+          sublabel="Past appointments"
+          tone="amber"
+          icon={icon('M12 8v4l3 3M12 21a9 9 0 100-18 9 9 0 000 18z')}
+        />
+        <StatCard
           label="Active staff"
           value={stats.activeStaff}
           sublabel={`${staff.length} total`}
@@ -65,7 +89,7 @@ export default function AdminOverview() {
         <StatCard
           label="Booked revenue"
           value={money(stats.revenue)}
-          sublabel="Upcoming + completed"
+          sublabel="Completed only"
           tone="teal"
           icon={icon('M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6')}
         />
@@ -94,7 +118,7 @@ export default function AdminOverview() {
                     {b.party.map((p) => p.service).join(' · ')}
                   </p>
                 </div>
-                <StatusBadge status={b.status} />
+                <StatusBadge status={b.status} date={b.date} time={b.time} />
               </li>
             ))}
           </ul>
