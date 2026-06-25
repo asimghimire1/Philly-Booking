@@ -66,7 +66,7 @@ export default function BookingSummary() {
 
   // Per-step Continue gating.
   const target = nextPath(currentStep)
-  const PHONE_RE = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/
+  const PHONE_RE = /^[\d\s\-\(\)\+]{7,20}$/
   const detailsValid =
     details.name.trim() &&
     PHONE_RE.test(details.phone.trim()) &&

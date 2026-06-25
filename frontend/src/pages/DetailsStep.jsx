@@ -35,7 +35,7 @@ export default function DetailsStep() {
   const { t, lang } = useI18n()
   const [waiverOpen, setWaiverOpen] = useState(false)
 
-  const PHONE_RE = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/
+  const PHONE_RE = /^[\d\s\-\(\)\+]{7,20}$/
   const phoneValid = !details.phone || PHONE_RE.test(details.phone.trim())
   const [phoneTouched, setPhoneTouched] = useState(false)
 
