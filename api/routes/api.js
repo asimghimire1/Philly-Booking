@@ -291,6 +291,7 @@ function bookingPayloadFromInput(b) {
     note: b.p_note ?? b.note ?? '',
     therapist_id: b.p_therapist_id ?? b.therapist_id ?? null,
     booking_group_id: b.p_booking_group_id ?? b.booking_group_id ?? null,
+    waiver_accepted: b.p_waiver_accepted ?? false,
   };
 }
 
@@ -495,6 +496,7 @@ router.put('/admin/bookings', async (req, res) => {
           customer_name: row.customer_name,
           customer_phone: row.customer_phone,
           customer_email: row.customer_email ?? '',
+          waiver_accepted: row.waiver_accepted ?? true,
         },
       });
     }

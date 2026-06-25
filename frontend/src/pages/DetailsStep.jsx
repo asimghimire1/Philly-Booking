@@ -32,8 +32,12 @@ function RadioDot({ selected }) {
 
 export default function DetailsStep() {
   const { details, patchDetails } = useBooking()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [waiverOpen, setWaiverOpen] = useState(false)
+
+  const PHONE_RE = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/
+  const phoneValid = !details.phone || PHONE_RE.test(details.phone.trim())
+  const [phoneTouched, setPhoneTouched] = useState(false)
 
   const tipOptions = [
     { id: '20', label: '20%' },
@@ -70,13 +74,19 @@ export default function DetailsStep() {
           <label className="block">
             <Label>{t('details.phone')}</Label>
             <input
-              className={inputCls}
+              className={`${inputCls} ${phoneTouched && !phoneValid ? 'border-rose-300 focus:border-rose-500' : ''}`}
               value={details.phone}
               onChange={(e) => patchDetails({ phone: e.target.value })}
+              onBlur={() => setPhoneTouched(true)}
               placeholder={t('details.phonePh')}
               inputMode="tel"
               autoComplete="tel"
             />
+            {phoneTouched && !phoneValid && (
+              <p className="mt-1 text-xs text-rose-500">
+                {lang === 'zh' ? '请输入有效的电话号码' : 'Enter a valid phone number'}
+              </p>
+            )}
           </label>
           <label className="block">
             <Label>{t('details.email')}</Label>

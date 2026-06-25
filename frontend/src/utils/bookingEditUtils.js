@@ -146,6 +146,7 @@ export function buildUpdatePayloads({ guests, customer, details }) {
     tip: g.primary ? Number(details.tip) || 0 : 0,
     payment: details.payment,
     note: details.note?.trim() || '',
+    waiver_accepted: true,
   }))
 }
 

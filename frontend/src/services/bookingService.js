@@ -43,6 +43,7 @@ export async function submitBooking({ guests, details }) {
       p_note: details.note?.trim() || '',
       p_therapist_id: g.therapist?.therapistId || null,
       p_booking_group_id: bookingGroupId,
+      p_waiver_accepted: details.waiver,
     }
   })
 
