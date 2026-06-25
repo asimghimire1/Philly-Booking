@@ -62,6 +62,19 @@ async function getAvailabilityData(date, durationMin, gender = null, options = {
     slots.push({ time: fmt(t), mins: t });
   }
 
+  // Remove slots within the 3-hour advance-booking window for today
+  const BUFFER_MIN = 180;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (date === todayStr) {
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    for (let i = slots.length - 1; i >= 0; i--) {
+      if (slots[i].mins <= currentMins + BUFFER_MIN) {
+        slots.splice(i, 1);
+      }
+    }
+  }
+
   // Fetch all non-cancelled bookings for this date
   const { data: bookingsRaw, error: bErr } = await supabase
     .from('bookings')
@@ -152,10 +165,43 @@ async function validateAndAssignBooking(b, guestIndex, { excludeBookingIds, isLo
   const partyArray = b.p_party ?? b.party;
   const requestedLabel = partyArray && partyArray[0] && partyArray[0].therapist ? partyArray[0].therapist : null;
   const genderFilter = requestedLabel === 'female' || requestedLabel === 'male' ? requestedLabel : null;
-  const data = await getAvailabilityData(date, durationMin, genderFilter, { excludeBookingIds });
 
   const startMin = parseAmPm(time);
-  if (startMin === null || data.closed || !data.slots.includes(time)) {
+  if (startMin === null) {
+    return {
+      error: {
+        status: 409,
+        body: {
+          error: 'SLOT_UNAVAILABLE',
+          guestIndex,
+          time,
+          detail: `${guestLabel}: ${time || 'time'} is not available on this date.`,
+        },
+      },
+    };
+  }
+
+  // 3-hour advance-booking buffer for today
+  const BUFFER_MIN = 180;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (date === todayStr && startMin <= now.getHours() * 60 + now.getMinutes() + BUFFER_MIN) {
+    return {
+      error: {
+        status: 409,
+        body: {
+          error: 'SLOT_UNAVAILABLE',
+          guestIndex,
+          time,
+          detail: `${guestLabel}: ${time} is too soon — bookings must be made at least 3 hours in advance.`,
+        },
+      },
+    };
+  }
+
+  const data = await getAvailabilityData(date, durationMin, genderFilter, { excludeBookingIds });
+
+  if (data.closed || !data.slots.includes(time)) {
     return {
       error: {
         status: 409,

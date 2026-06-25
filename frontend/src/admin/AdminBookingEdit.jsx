@@ -16,6 +16,7 @@ import {
   localName,
   hasSelection,
   selectionMinutes,
+  formatMinutes,
 } from '../data/catalog.js'
 import { useTherapists } from '../data/therapists.jsx'
 import { useAvailability } from '../hooks/useAvailability.js'
@@ -213,7 +214,7 @@ function GuestDateTimeSection({ guest, excludeBookingIds, therapists, disabled }
     excludeBookingIds,
   })
 
-  const stepLabel = durationMin < 60 ? `${durationMin} min` : `${durationMin / 60} hr`
+  const stepLabel = formatMinutes(durationMin)
 
   return (
     <div className="space-y-4">

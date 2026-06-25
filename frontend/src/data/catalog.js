@@ -62,10 +62,10 @@ export const categories = [
 
 // Admin-configurable add-on list (brief §4 / §11.5). Hot Stones is complimentary ($0).
 export const addons = [
-  { id: 'hotstones', nameEn: 'Hot Stones', nameZh: '热石', descEn: 'Complimentary on request', descZh: '应要求免费提供', price: 0, free: true },
-  { id: 'firecupping', nameEn: 'Fire Cupping', nameZh: '火罐', descEn: 'Add-on · 20 min', descZh: '附加 · 20 分钟', price: 40 },
-  { id: 'guasha', nameEn: 'Gua Sha', nameZh: '刮痧', descEn: 'Add-on · 20 min', descZh: '附加 · 20 分钟', price: 40 },
-  { id: 'ear', nameEn: 'Ear Cleansing', nameZh: '采耳', descEn: 'Add-on · 20 min', descZh: '附加 · 20 分钟', price: 40 },
+  { id: 'hotstones', nameEn: 'Hot Stones', nameZh: '热石', descEn: 'Complimentary on request', descZh: '应要求免费提供', price: 0, free: true, min: 0 },
+  { id: 'firecupping', nameEn: 'Fire Cupping', nameZh: '火罐', descEn: 'Add-on · 30 min', descZh: '附加 · 30 分钟', price: 40, min: 30 },
+  { id: 'guasha', nameEn: 'Gua Sha', nameZh: '刮痧', descEn: 'Add-on · 30 min', descZh: '附加 · 30 分钟', price: 40, min: 30 },
+  { id: 'ear', nameEn: 'Ear Cleansing', nameZh: '采耳', descEn: 'Add-on · 30 min', descZh: '附加 · 30 分钟', price: 40, min: 30 },
 ]
 
 // Combo packages — fill each slot with any technique (brief §4d).
@@ -125,13 +125,28 @@ export const addonsPrice = (sel) =>
 export const selectionTotal = (sel) => basePrice(sel) + addonsPrice(sel)
 
 // How long the appointment runs, in minutes — drives the time-slot spacing.
+// Add-on durations are stacked on top of the base service (hot stones is free and
+// time-inclusive with min: 0, so it adds nothing).
 export function selectionMinutes(sel) {
   if (!sel) return 60
-  if (sel.mode === 'combo') return getCombo(sel.comboId)?.minutes ?? 60
-  const cat = getCategory(sel.categoryId)
-  if (!cat) return 60
-  if (cat.type === 'duration') return getDuration(sel.durationId)?.minutes ?? 60
-  return getItem(sel.categoryId, sel.pickId)?.min ?? 30
+
+  // 1. Base service duration
+  let base
+  if (sel.mode === 'combo') { base = getCombo(sel.comboId)?.minutes ?? 60 }
+  else {
+    const cat = getCategory(sel.categoryId)
+    if (!cat) { base = 60 }
+    else if (cat.type === 'duration') { base = getDuration(sel.durationId)?.minutes ?? 60 }
+    else { base = getItem(sel.categoryId, sel.pickId)?.min ?? 30 }
+  }
+
+  // 2. Stack paid add-on durations (free/inclusive addons have min: 0)
+  const addonMinutes = (sel.addonIds ?? []).reduce((sum, id) => {
+    const a = getAddon(id)
+    return sum + (a?.min ?? 0)
+  }, 0)
+
+  return base + addonMinutes
 }
 
 // Tip amount from the chosen tip option (percent of services, custom $, or none).
@@ -153,7 +168,19 @@ export const hasSelection = (sel) => {
   return cat.type === 'duration' ? !!(sel.durationId && sel.pickId) : !!sel.pickId
 }
 
+// Format a duration in minutes to a short label, e.g. 90 → "1.5 hr".
+export function formatMinutes(minutes, lang = 'en') {
+  if (!minutes || minutes <= 0) return ''
+  if (minutes < 60) return `${minutes} ${lang === 'zh' ? '分钟' : 'min'}`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (m === 0) return `${h} ${lang === 'zh' ? '小时' : 'hr'}`
+  if (m === 30) return `${h}.5 ${lang === 'zh' ? '小时' : 'hr'}`
+  return `${h} ${lang === 'zh' ? '小时' : 'hr'} ${m} ${lang === 'zh' ? '分钟' : 'min'}`
+}
+
 // Compact label for the summary main line, e.g. "Tui-Na (1 hr)".
+// Shows total duration including add-ons.
 export function summaryLabel(sel) {
   if (!sel) return ''
   if (sel.mode === 'combo') return getCombo(sel.comboId)?.nameEn ?? ''
@@ -161,39 +188,41 @@ export function summaryLabel(sel) {
   const item = getItem(sel.categoryId, sel.pickId)
   if (!cat || !item) return ''
   if (cat.type === 'duration') {
-    return `${item.nameEn} (${getDuration(sel.durationId)?.short ?? ''})`
+    return `${item.nameEn} (${formatMinutes(selectionMinutes(sel))})`
   }
   return item.nameEn
 }
 
 // Compact line for the confirmation page, e.g. "Tui-Na, 1 hr" (Chinese when translated).
+// Shows total duration including add-ons.
 export function confirmLabel(sel, lang = 'en') {
   if (!sel) return ''
   if (sel.mode === 'combo') return localName(getCombo(sel.comboId), lang)
   const cat = getCategory(sel.categoryId)
   const item = getItem(sel.categoryId, sel.pickId)
   if (!cat || !item) return ''
+  const totalMin = selectionMinutes(sel)
   if (cat.type === 'duration') {
-    return `${localName(item, lang)}, ${getDuration(sel.durationId)?.short ?? ''}`
+    return `${localName(item, lang)}, ${formatMinutes(totalMin, lang)}`
   }
-  return `${localName(item, lang)}, ${item.min} min`
+  return `${localName(item, lang)}, ${formatMinutes(totalMin, lang)}`
 }
 
-// Detailed line for a confirmed-guest row, e.g. "Tui-Na 推拿 · 1 hour · Body Massage".
+// Detailed line for a confirmed-guest row, e.g. "Tui-Na 推拿 · 1 hr · Body Massage".
+// Shows total duration including add-ons.
 export function detailLine(sel, lang = 'en') {
   if (!sel) return ''
   if (sel.mode === 'combo') {
     const combo = getCombo(sel.comboId)
-    return `${localName(combo, lang)} · ${lang === 'zh' ? combo?.durationZh : combo?.durationEn}`
+    const total = selectionMinutes(sel)
+    const base = `${localName(combo, lang)} · ${lang === 'zh' ? combo?.durationZh : combo?.durationEn}`
+    if (total > (combo?.minutes ?? 0)) {
+      return `${base} + ${formatMinutes(total - (combo?.minutes ?? 0), lang)}`
+    }
+    return base
   }
   const cat = getCategory(sel.categoryId)
   const item = getItem(sel.categoryId, sel.pickId)
   if (!cat || !item) return ''
-  const dur =
-    cat.type === 'duration'
-      ? lang === 'zh'
-        ? getDuration(sel.durationId)?.labelZh
-        : getDuration(sel.durationId)?.labelEn
-      : `${item.min} min`
-  return `${localName(item, lang)} · ${dur} · ${localName(cat, lang)}`
+  return `${localName(item, lang)} · ${formatMinutes(selectionMinutes(sel), lang)} · ${localName(cat, lang)}`
 }

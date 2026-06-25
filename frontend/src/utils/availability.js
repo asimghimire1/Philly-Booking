@@ -67,9 +67,12 @@ export function computeGuestAvailability(
   const todayStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0]
   const currentMins = now.getHours() * 60 + now.getMinutes()
 
+  const BUFFER_HOURS = 3
+  const bufferMins = BUFFER_HOURS * 60
+
   if (dateStr === todayStr) {
     for (const slotStr of json.slots) {
-      if (parseAmPm(slotStr) <= currentMins) {
+      if (parseAmPm(slotStr) <= currentMins + bufferMins) {
         unavailableSet.add(slotStr)
       }
     }

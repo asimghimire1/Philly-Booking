@@ -4,7 +4,7 @@ import { useI18n } from '../i18n/LanguageContext.jsx'
 import DatePicker from '../components/booking/DatePicker.jsx'
 import InfoBox from '../components/booking/InfoBox.jsx'
 import BackButton from '../components/booking/BackButton.jsx'
-import { selectionMinutes, hasSelection } from '../data/catalog.js'
+import { selectionMinutes, hasSelection, formatMinutes } from '../data/catalog.js'
 import { useAvailability } from '../hooks/useAvailability.js'
 import { guestAvailabilityParams } from '../services/availabilityService.js'
 import { useTherapists } from '../data/therapists.jsx'
@@ -72,9 +72,7 @@ function GuestDateTimePicker({ guest, name, avatar, primary, showHeader, guests,
   }, [guest.id, loading, setGuestAvailabilityLoading])
 
   // Spacing label
-  const stepLabel = durationMin < 60
-    ? `${durationMin} ${lang === 'zh' ? '分钟' : 'min'}`
-    : `${durationMin / 60} ${lang === 'zh' ? '小时' : 'hr'}`
+  const stepLabel = formatMinutes(durationMin, lang)
 
   // Drop selected time if it's no longer valid — but not while apply/reload is in progress.
   useEffect(() => {
