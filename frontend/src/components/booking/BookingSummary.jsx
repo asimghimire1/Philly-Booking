@@ -13,6 +13,7 @@ import {
 } from '../../data/catalog.js'
 import { findTherapistById, therapistLabel, useTherapists } from '../../data/therapists.jsx'
 import { validatePartySchedule, formatScheduleError } from '../../utils/scheduleValidation.js'
+import { isValidPhone } from '../../data/phoneCountries.js'
 
 const money = (n) => `$${n.toFixed(2)}`
 
@@ -66,10 +67,12 @@ export default function BookingSummary() {
 
   // Per-step Continue gating.
   const target = nextPath(currentStep)
-  const PHONE_RE = /^[\d\s\-\(\)\+]{7,20}$/
+  const fullPhone = details.phoneCode && details.phone
+    ? `${details.phoneCode} ${details.phone.replace(/\D/g, '')}`
+    : details.phone || ''
   const detailsValid =
     details.name.trim() &&
-    PHONE_RE.test(details.phone.trim()) &&
+    isValidPhone(fullPhone) &&
     /\S+@\S+\.\S+/.test(details.email) &&
     details.waiver
   const servicesReady = single

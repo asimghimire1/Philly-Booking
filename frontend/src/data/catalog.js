@@ -127,6 +127,8 @@ export const selectionTotal = (sel) => basePrice(sel) + addonsPrice(sel)
 // How long the appointment runs, in minutes — drives the time-slot spacing.
 // Add-on durations are stacked on top of the base service (hot stones is free and
 // time-inclusive with min: 0, so it adds nothing).
+// A 10-minute prep/cleaning buffer is added to every slot.
+const PREP_BUFFER_MIN = 10
 export function selectionMinutes(sel) {
   if (!sel) return 60
 
@@ -146,7 +148,7 @@ export function selectionMinutes(sel) {
     return sum + (a?.min ?? 0)
   }, 0)
 
-  return base + addonMinutes
+  return base + addonMinutes + PREP_BUFFER_MIN
 }
 
 // Tip amount from the chosen tip option (percent of services, custom $, or none).

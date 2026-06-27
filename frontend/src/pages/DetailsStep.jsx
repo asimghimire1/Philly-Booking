@@ -5,6 +5,7 @@ import Pill from '../components/booking/Pill.jsx'
 import InfoBox from '../components/booking/InfoBox.jsx'
 import BackButton from '../components/booking/BackButton.jsx'
 import WaiverModal from '../components/booking/WaiverModal.jsx'
+import { phoneCountries, isValidPhone, detectPhoneCode, combinePhone } from '../data/phoneCountries.js'
 
 const inputCls =
   'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-navy outline-none transition-colors placeholder:text-slate-400 focus:border-teal'
@@ -35,8 +36,10 @@ export default function DetailsStep() {
   const { t, lang } = useI18n()
   const [waiverOpen, setWaiverOpen] = useState(false)
 
-  const PHONE_RE = /^[\d\s\-\(\)\+]{7,20}$/
-  const phoneValid = !details.phone || PHONE_RE.test(details.phone.trim())
+  const fullPhone = details.phoneCode && details.phone
+    ? `${details.phoneCode} ${details.phone.replace(/\D/g, '')}`
+    : details.phone || ''
+  const phoneValid = !fullPhone || isValidPhone(fullPhone)
   const [phoneTouched, setPhoneTouched] = useState(false)
 
   const tipOptions = [
@@ -71,16 +74,32 @@ export default function DetailsStep() {
         </label>
 
         <div className="grid gap-6 sm:grid-cols-2">
+          {/* Country code dropdown */}
+          <label className="block">
+            <Label>{lang === 'zh' ? '国家/地区' : 'Country'}</Label>
+            <select
+              className={inputCls}
+              value={details.phoneCode === '' ? '' : (details.phoneCode || '+1')}
+              onChange={(e) => patchDetails({ phoneCode: e.target.value })}
+            >
+              {phoneCountries.map((c) => (
+                <option key={c.code || 'other'} value={c.code}>
+                  {c.code ? `${c.name} ${c.code}` : c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {/* Phone number input */}
           <label className="block">
             <Label>{t('details.phone')}</Label>
             <input
               className={`${inputCls} ${phoneTouched && !phoneValid ? 'border-rose-300 focus:border-rose-500' : ''}`}
               value={details.phone}
-              onChange={(e) => patchDetails({ phone: e.target.value })}
+              onChange={(e) => patchDetails({ phone: e.target.value.replace(/[^\d\s\-]/g, '') })}
               onBlur={() => setPhoneTouched(true)}
               placeholder={t('details.phonePh')}
-              inputMode="tel"
-              autoComplete="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
             />
             {phoneTouched && !phoneValid && (
               <p className="mt-1 text-xs text-rose-500">
@@ -88,18 +107,20 @@ export default function DetailsStep() {
               </p>
             )}
           </label>
-          <label className="block">
-            <Label>{t('details.email')}</Label>
-            <input
-              className={inputCls}
-              value={details.email}
-              onChange={(e) => patchDetails({ email: e.target.value })}
-              placeholder={t('details.emailPh')}
-              inputMode="email"
-              autoComplete="email"
-            />
-          </label>
         </div>
+
+        {/* Email — full width below country+phone */}
+        <label className="block">
+          <Label>{t('details.email')}</Label>
+          <input
+            className={inputCls}
+            value={details.email}
+            onChange={(e) => patchDetails({ email: e.target.value })}
+            placeholder={t('details.emailPh')}
+            inputMode="email"
+            autoComplete="email"
+          />
+        </label>
 
         <label className="block">
           <Label optional={t('details.optional')}>{t('details.note')}</Label>

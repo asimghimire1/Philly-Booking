@@ -178,6 +178,7 @@ export function BookingProvider({ children }) {
   const [details, setDetails] = useState({
     name: '',
     phone: '',
+    phoneCode: '+1',
     email: '',
     note: '',
     tipMode: '25', // '20' | '25' | '30' | 'custom' | 'later'
@@ -272,6 +273,7 @@ export function BookingProvider({ children }) {
     setDetails({
       name: '',
       phone: '',
+      phoneCode: '+1',
       email: '',
       note: '',
       tipMode: '25',

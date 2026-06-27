@@ -30,7 +30,9 @@ export async function submitBooking({ guests, details }) {
 
     return {
       p_customer_name: details.name.trim(),
-      p_customer_phone: details.phone.trim(),
+      p_customer_phone: details.phoneCode && details.phone.trim()
+        ? `${details.phoneCode} ${details.phone.replace(/\D/g, '')}`
+        : details.phone.trim(),
       p_customer_email: details.email.trim(),
       p_booking_date: dateStr,
       p_booking_time: g.dateTime?.time || '',
