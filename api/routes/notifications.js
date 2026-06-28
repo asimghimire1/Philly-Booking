@@ -111,10 +111,15 @@ router.get('/notifications', async (req, res) => {
         try { party = JSON.parse(party) } catch { party = [] }
       }
 
+      // DEBUG: log what we're evaluating for each booking
+      const within12 = isWithin12hr(date, time)
+      const bookedWell = wasBookedWellInAdvance(b.created_at, date, time)
+      console.log(`[CRON] Booking ${b.id} | date=${date} time=${time} status=${b.status} | reminder_sent=${b.reminder_sent} within12hr=${within12} bookedWellInAdvance=${bookedWell}`)
+
       // ── Template 2: 12hr reminder ──
       // Only send if the booking was made more than 12hrs in advance.
       // If booked within 12hrs of the appointment, the confirmation covers it.
-      if (!b.reminder_sent && b.status === 'upcoming' && isWithin12hr(date, time) && wasBookedWellInAdvance(b.created_at, date, time)) {
+      if (!b.reminder_sent && b.status === 'upcoming' && within12 && bookedWell) {
         try {
           await client.emails.send({
             from: FROM_EMAIL,

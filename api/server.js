@@ -32,9 +32,8 @@ async function runCron() {
     }
   } catch (err) { /* server starting — ignore */ }
 }
-// ── TEMP TEST: fires every hour at :07 past ──
-// To revert to production (:00), change TARGET_MINUTE back to 0
-const TARGET_MINUTE = 12
+// Fires every hour at :00 (10 PM, 11 PM, 12 AM, etc.)
+const TARGET_MINUTE = 0
 const now = new Date()
 const currentMin = now.getMinutes()
 const currentSec = now.getSeconds()
