@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 
 
 const AdminDataContext = createContext(null)
@@ -20,6 +20,9 @@ export function AdminDataProvider({ children }) {
   const [hours, setHours] = useState({})
   const [closures, setClosures] = useState([])
   const [loading, setLoading] = useState(true)
+  const [newBookingAlert, setNewBookingAlert] = useState(null)
+
+  const bookingsRef = useRef([])
 
   const loadAll = useCallback(async () => {
     setLoading(true)
@@ -28,7 +31,24 @@ export function AdminDataProvider({ children }) {
       const response = await fetch(`${API_URL}/api/admin/data`)
       const data = await response.json()
       
-      setBookings(data.bookings || [])
+      const raw = data.bookings || []
+      const prevBookings = bookingsRef.current
+
+      // Detect new bookings for toast notification
+      if (prevBookings.length > 0 && raw.length > prevBookings.length) {
+        const prevIds = new Set(prevBookings.map((b) => b.id))
+        const newest = raw.find((b) => !prevIds.has(b.id))
+        if (newest) {
+          setNewBookingAlert({
+            id: Date.now(),
+            customerName: newest.customer_name,
+            time: newest.booking_time || '',
+            count: raw.length - prevBookings.length,
+          })
+        }
+      }
+
+      setBookings(raw)
       setStaff(data.staff || [])
       
       if (data.hours) {
@@ -50,7 +70,13 @@ export function AdminDataProvider({ children }) {
 
   useEffect(() => {
     loadAll()
+    // Poll for new bookings every 30s
+    const interval = setInterval(loadAll, 30000)
+    return () => clearInterval(interval)
   }, [loadAll])
+
+  // Keep ref in sync for toast detection
+  useEffect(() => { bookingsRef.current = bookings }, [bookings])
 
   const apiFetch = async (url, options = {}) => {
     const API_URL = import.meta.env.VITE_API_URL || ''
@@ -193,6 +219,8 @@ export function AdminDataProvider({ children }) {
     staff,
     availability: { hours, closures },
     loading,
+    newBookingAlert,
+    clearNewBookingAlert: () => setNewBookingAlert(null),
     ...actions,
   }
 

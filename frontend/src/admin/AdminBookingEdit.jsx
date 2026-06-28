@@ -239,7 +239,7 @@ function GuestDateTimeSection({ guest, excludeBookingIds, therapists, disabled }
           <p className="py-4 text-sm text-slate-400">Loading available times…</p>
         ) : closed ? (
           <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-            Studio closed on this date.
+            Services are closed on this date.
           </p>
         ) : error ? (
           <p className="text-sm text-rose-500">{error}</p>

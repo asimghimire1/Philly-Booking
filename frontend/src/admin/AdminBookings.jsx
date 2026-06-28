@@ -1,8 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminData } from './data.jsx'
 import BookingDetailModal from './BookingDetailModal.jsx'
 import { Card, PageHeading, StatusBadge, PaymentBadge, Initials, fieldCls, fmtDate, money } from './ui.jsx'
+
+const PAGE_SIZE = 15
+
+function refNum(ref) {
+  return parseInt((ref || '').replace('PAW-', ''), 10) || 0
+}
 
 // Get current datetime as ISO string for comparison
 function nowIso() {
@@ -22,8 +28,13 @@ export default function AdminBookings() {
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState(null)
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE)
+  const headingRef = useRef(null)
 
-const now = nowIso()
+  const now = nowIso()
+
+  // Reset load count when filter or search changes
+  useEffect(() => { setDisplayCount(PAGE_SIZE) }, [filter, query])
 
   const counts = useMemo(() => {
     const c = { all: bookings.length, upcoming: 0, unresolved: 0, completed: 0, cancelled: 0 }
@@ -42,7 +53,7 @@ const now = nowIso()
     return c
   }, [bookings, now])
 
-  const visible = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return bookings
       .filter((b) => {
@@ -59,15 +70,20 @@ const now = nowIso()
             b.customer.phone.includes(q) ||
             b.customer.email.toLowerCase().includes(q),
       )
-      .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1))
+      .sort((a, b) => refNum(b.ref) - refNum(a.ref))
   }, [bookings, filter, query, now])
+
+  const paged = useMemo(() => filtered.slice(0, displayCount), [filtered, displayCount])
+  const hasMore = paged.length < filtered.length
 
   const open = bookings.find((b) => b.id === openId)
   const total = (b) => b.servicesTotal + b.addonsTotal + b.tip
 
   return (
     <div className="animate-step">
-      <PageHeading title="Bookings" subtitle="View and manage all appointments" />
+      <div ref={headingRef}>
+        <PageHeading title="Bookings" subtitle="View and manage all appointments" />
+      </div>
 
       {/* Filters + search */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -109,11 +125,11 @@ const now = nowIso()
       </div>
 
       {/* List */}
-      {visible.length === 0 ? (
+      {filtered.length === 0 ? (
         <Card className="p-10 text-center text-sm text-slate-400">No bookings match.</Card>
       ) : (
         <div className="space-y-3">
-          {visible.map((b) => (
+          {paged.map((b) => (
             <Card key={b.id} className="p-4 transition-shadow hover:shadow-sm">
               <div className="flex items-center gap-4">
                 <Initials name={b.customer.name} className="h-11 w-11" />
@@ -147,6 +163,40 @@ const now = nowIso()
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Load more / Show less — uses stable cursor from top, so new
+          bookings arriving via polling never cause duplicates or gaps. */}
+      {filtered.length > PAGE_SIZE && (
+        <div className="mt-6 flex items-center justify-center gap-3">
+          {displayCount > PAGE_SIZE && (
+            <button
+              type="button"
+              onClick={() => { setDisplayCount((c) => Math.max(PAGE_SIZE, c - PAGE_SIZE)); headingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-navy"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <path d="M6 15l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Show less
+            </button>
+          )}
+          <span className="text-xs text-slate-400">
+            {paged.length} of {filtered.length}
+          </span>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => { setDisplayCount((c) => c + PAGE_SIZE) }}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-navy"
+            >
+              Load more
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 

@@ -1,5 +1,6 @@
 const { supabase } = require('../lib/supabaseClient')
 const client = require('../lib/squareClient')
+const { sendBookingEmails } = require('../lib/emailService')
 
 const SQUARE_LOCATION_ID = process.env.SQUARE_LOCATION_ID || ''
 
@@ -160,6 +161,9 @@ async function handleCreatePayment(req, res) {
       .select()
 
     if (updateError) throw updateError
+
+    // Fire emails asynchronously (don't block the response)
+    sendBookingEmails(updatedBookings).catch((e) => console.error('Email error:', e.message))
 
     res.json({ data: updatedBookings, payment: { id: payment.id, status: payment.status } })
   } catch (err) {

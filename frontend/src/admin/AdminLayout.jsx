@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../assets/Images/logo.png'
 import { useAdminAuth } from './auth.jsx'
+import { useAdminData } from './data.jsx'
+import Toast from './Toast.jsx'
 
 const NAV = [
   { to: '/admin', end: true, label: 'Overview', icon: 'M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6v-9h-6v9zm0-16v5h6V4h-6z' },
@@ -11,7 +13,7 @@ const NAV = [
   { to: '/admin/staff', label: 'Staff', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 20a8 8 0 0116 0' },
 ]
 
-function NavItem({ to, end, label, icon, onClick }) {
+function NavItem({ to, end, label, icon, badge, onClick }) {
   return (
     <NavLink
       to={to}
@@ -29,15 +31,31 @@ function NavItem({ to, end, label, icon, onClick }) {
         <path d={icon} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       {label}
+      {badge > 0 && (
+        <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-bold leading-none text-white">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </NavLink>
   )
+}
+
+function navBadge(item, count) {
+  return item.to === '/admin/bookings' ? count : 0
 }
 
 export default function AdminLayout() {
   const { user, signOut } = useAdminAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { newBookingAlert, clearNewBookingAlert } = useAdminData()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [newBookingCount, setNewBookingCount] = useState(() => {
+    const saved = localStorage.getItem('adminNewBookingCount')
+    return saved ? parseInt(saved, 10) : 0
+  })
+  const isFirstRender = useRef(true)
 
   // Close the drawer on navigation, and lock scroll + allow Escape while open.
   useEffect(() => setMenuOpen(false), [pathname])
@@ -53,6 +71,29 @@ export default function AdminLayout() {
     }
   }, [menuOpen])
 
+  // Show toast + increment badge when a new booking is detected via polling
+  useEffect(() => {
+    if (!newBookingAlert) return
+    setToast(newBookingAlert)
+    setNewBookingCount((c) => {
+      const next = c + (newBookingAlert.count || 1)
+      localStorage.setItem('adminNewBookingCount', String(next))
+      return next
+    })
+  }, [newBookingAlert])
+
+  // Reset badge when navigating to Bookings (not on initial page reload)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    if (pathname === '/admin/bookings' || pathname.startsWith('/admin/bookings/')) {
+      setNewBookingCount(0)
+      localStorage.removeItem('adminNewBookingCount')
+    }
+  }, [pathname])
+
   const onSignOut = () => {
     signOut()
     navigate('/admin/login', { replace: true })
@@ -60,6 +101,13 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-slate-100">
+      {toast && (
+        <Toast
+          message={`New booking from ${toast.customerName}`}
+          detail={toast.count > 1 ? `${toast.count} new bookings arrived` : `Scheduled at ${toast.time}`}
+          onDismiss={() => { setToast(null); clearNewBookingAlert() }}
+        />
+      )}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
@@ -136,7 +184,7 @@ export default function AdminLayout() {
         </div>
         <nav className="flex flex-col gap-1 overflow-y-auto p-3">
           {NAV.map((item) => (
-            <NavItem key={item.to} {...item} onClick={() => setMenuOpen(false)} />
+            <NavItem key={item.to} {...item} badge={navBadge(item, newBookingCount)} onClick={() => setMenuOpen(false)} />
           ))}
         </nav>
         {user && (
@@ -164,7 +212,7 @@ export default function AdminLayout() {
         <aside className="hidden min-w-0 lg:block lg:py-1">
           <nav className="flex flex-col gap-2">
             {NAV.map((item) => (
-              <NavItem key={item.to} {...item} />
+              <NavItem key={item.to} {...item} badge={navBadge(item, newBookingCount)} />
             ))}
           </nav>
         </aside>

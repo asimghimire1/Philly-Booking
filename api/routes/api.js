@@ -377,7 +377,11 @@ router.post('/bookings', async (req, res) => {
       .select();
 
     if (error) throw error;
-    
+
+    // Fire emails asynchronously for pay-at-visit bookings
+    const { sendBookingEmails } = require('../lib/emailService')
+    sendBookingEmails(data).catch((e) => console.error('Email error:', e.message))
+
     // Return array if input was array, else single item
     res.json({ data: (Array.isArray(body) || (body.bookings && Array.isArray(body.bookings))) ? data : (data?.[0] || data) });
   } catch (err) {

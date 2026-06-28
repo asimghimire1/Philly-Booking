@@ -145,7 +145,7 @@ function GuestDateTimePicker({ guest, name, avatar, primary, showHeader, guests,
           </div>
         ) : closed ? (
           <div className="py-8 text-center text-sm font-medium text-rose-500 bg-rose-50 rounded-xl border border-rose-100">
-            ⚠️ {lang === 'zh' ? '该日期店铺已关闭。请选择其他日期。' : 'The studio is closed on this date. Please pick another.'}
+            ⚠️ {lang === 'zh' ? '该日期服务已关闭。请选择其他日期。' : 'Our services are closed on this date. Please pick another.'}
           </div>
         ) : error ? (
           <div className="py-6 text-center text-sm text-rose-500 font-medium">
