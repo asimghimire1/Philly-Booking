@@ -1,7 +1,9 @@
 import { createContext, useContext, useMemo, useState, useCallback, useRef, useEffect } from 'react'
-import { getCombo, selectionMinutes } from '../data/catalog.js'
+import { getCombo, selectionMinutes, basePrice, addonsPrice, computeTip, confirmLabel } from '../data/catalog.js'
+import { therapistLabel } from '../data/therapists.jsx'
 import { findTherapistById, useTherapists } from '../data/therapists.jsx'
 import { submitBooking } from '../services/bookingService.js'
+import { createPaymentBooking } from '../services/paymentService.js'
 import {
   availabilityFetchKey,
   fetchAvailability,
@@ -51,6 +53,41 @@ const initialGuests = [
     dateTime: defaultDateTime(),
   },
 ]
+
+function buildParty(guests) {
+  return guests.map((g) => ({
+    name: g.primary ? 'You' : 'Guest',
+    service: confirmLabel(g.selection, 'en'),
+    therapist: therapistLabel(g.therapist),
+    addons: g.selection.addonIds ?? [],
+    _selection: g.selection,
+  }))
+}
+
+function buildBookingPayload({ bookedGuests, details, totalTip, bookingGroupId, getLocalDateStr }) {
+  return bookedGuests.map((g) => {
+    const dateStr = g.dateTime?.date ? getLocalDateStr(g.dateTime.date) : ''
+    return {
+      p_customer_name: details.name.trim(),
+      p_customer_phone: details.phoneCode && details.phone.trim()
+        ? `${details.phoneCode} ${details.phone.replace(/\D/g, '')}`
+        : details.phone.trim(),
+      p_customer_email: details.email.trim(),
+      p_booking_date: dateStr,
+      p_booking_time: g.dateTime?.time || '',
+      p_duration_min: selectionMinutes(g.selection),
+      p_party: buildParty([g]),
+      p_services_total: basePrice(g.selection),
+      p_addons_total: addonsPrice(g.selection),
+      p_tip: g.primary ? totalTip : 0,
+      p_payment: details.payment,
+      p_note: details.note?.trim() || '',
+      p_therapist_id: g.therapist?.therapistId || null,
+      p_booking_group_id: bookingGroupId,
+      p_waiver_accepted: details.waiver,
+    }
+  })
+}
 
 export function BookingProvider({ children }) {
   const { therapists } = useTherapists()
@@ -178,7 +215,7 @@ export function BookingProvider({ children }) {
   const [details, setDetails] = useState({
     name: '',
     phone: '',
-    phoneCode: '+1',
+    phoneCode: '+86',
     email: '',
     note: '',
     tipMode: '25', // '20' | '25' | '30' | 'custom' | 'later'
@@ -202,6 +239,7 @@ export function BookingProvider({ children }) {
   const [dateTimeShortfall, setDateTimeShortfall] = useState(0)
   const [applySettling, setApplySettling] = useState(false)
   const applyGuestIdsRef = useRef([])
+  const cardTokenizeRef = useRef(null)
 
   const setGuestAvailabilityLoading = useCallback((guestId, loading) => {
     setGuestAvailabilityLoadingState((prev) => {
@@ -235,12 +273,40 @@ export function BookingProvider({ children }) {
     setSubmitError(null)
     setSubmitErrorDetail(null)
     try {
-      const saved = await submitBooking({ guests, details })
+      const bookedGuests = guests.filter((g) => g.confirmed || guests.length === 1)
+      const servicesTotal = bookedGuests.reduce((s, g) => s + basePrice(g.selection), 0)
+      const addonsTotal = bookedGuests.reduce((s, g) => s + addonsPrice(g.selection), 0)
+      const totalTip = computeTip(details, servicesTotal + addonsTotal)
+
+      const bookingGroupId = crypto.randomUUID()
+      const getLocalDateStr = (d) => d instanceof Date
+        ? new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 10)
+        : String(d).slice(0, 10)
+
+      const payload = buildBookingPayload({ bookedGuests, details, totalTip, bookingGroupId, getLocalDateStr })
+
+      let saved
+      if (details.payment === 'prepay') {
+        // 1. Tokenize card
+        if (!cardTokenizeRef.current) throw new Error('PAYMENT_NOT_READY')
+        const token = await cardTokenizeRef.current()
+        if (!token) throw new Error('CARD_INVALID')
+
+        // 2. Charge card + create booking atomically
+        saved = await createPaymentBooking({
+          sourceId: token,
+          bookingPayloads: payload,
+          bookingGroupId,
+        })
+        saved = saved.data
+      } else {
+        // Pay at visit — just create the booking
+        saved = await submitBooking({ guests, details, bookingGroupId })
+      }
+
       const savedArr = Array.isArray(saved) ? saved : [saved]
 
-      // The backend may have auto-assigned a therapist. Update our local context
-      // so the Confirmation Page displays the actual assigned name instead of "No preference".
-      const bookedGuests = guests.filter((g) => g.confirmed || guests.length === 1)
+      // Update guest therapist info from backend response
       setGuests((prev) =>
         prev.map((g) => {
           if (!(g.confirmed || guests.length === 1)) return g
@@ -273,7 +339,7 @@ export function BookingProvider({ children }) {
     setDetails({
       name: '',
       phone: '',
-      phoneCode: '+1',
+      phoneCode: '+86',
       email: '',
       note: '',
       tipMode: '25',
@@ -498,6 +564,7 @@ export function BookingProvider({ children }) {
       completed,
       completeBooking,
       submitting,
+      cardTokenizeRef,
       submitError,
       submitErrorDetail,
       bookingRef,

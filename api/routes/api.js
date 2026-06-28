@@ -414,7 +414,12 @@ router.put('/admin/bookings/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const { error } = await supabase.from('bookings').update({ status }).eq('id', id);
+    const updates = { status };
+    // If marking as completed, also mark payment as completed if not already
+    if (status === 'completed') {
+      updates.payment_status = 'completed';
+    }
+    const { error } = await supabase.from('bookings').update(updates).eq('id', id);
     if (error) throw error;
     res.json({ success: true });
   } catch (err) {
@@ -644,3 +649,6 @@ router.delete('/admin/closures/:date', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.createLocalBlockedTracker = createLocalBlockedTracker;
+module.exports.getAvailabilityData = getAvailabilityData;
+module.exports.bookingPayloadFromInput = bookingPayloadFromInput;

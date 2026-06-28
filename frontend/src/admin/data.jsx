@@ -181,6 +181,7 @@ export function AdminDataProvider({ children }) {
     addonsTotal: Number(b.addons_total),
     tip: Number(b.tip),
     payment: b.payment,
+    paymentStatus: b.payment_status,
     note: b.note,
     createdAt: b.created_at,
     therapistId: b.therapist_id,

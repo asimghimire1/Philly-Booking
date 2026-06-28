@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useBooking } from '../context/BookingContext.jsx'
 import { useI18n } from '../i18n/LanguageContext.jsx'
+import { selectionTotal, hasSelection } from '../data/catalog.js'
 import Pill from '../components/booking/Pill.jsx'
 import InfoBox from '../components/booking/InfoBox.jsx'
 import BackButton from '../components/booking/BackButton.jsx'
 import WaiverModal from '../components/booking/WaiverModal.jsx'
+import SquareCardForm from '../components/booking/SquareCardForm.jsx'
 import { phoneCountries, isValidPhone, detectPhoneCode, combinePhone } from '../data/phoneCountries.js'
 
 const inputCls =
@@ -32,7 +34,7 @@ function RadioDot({ selected }) {
 }
 
 export default function DetailsStep() {
-  const { details, patchDetails } = useBooking()
+  const { guests, details, patchDetails, submitting, cardTokenizeRef } = useBooking()
   const { t, lang } = useI18n()
   const [waiverOpen, setWaiverOpen] = useState(false)
 
@@ -79,7 +81,7 @@ export default function DetailsStep() {
             <Label>{lang === 'zh' ? '国家/地区' : 'Country'}</Label>
             <select
               className={inputCls}
-              value={details.phoneCode === '' ? '' : (details.phoneCode || '+1')}
+              value={details.phoneCode === '' ? '' : (details.phoneCode || '+86')}
               onChange={(e) => patchDetails({ phoneCode: e.target.value })}
             >
               {phoneCountries.map((c) => (
@@ -159,39 +161,11 @@ export default function DetailsStep() {
             {details.payment === 'prepay' && (
               <div className="space-y-3">
                 <InfoBox>{t('details.prepayInfo')}</InfoBox>
-                {/* Visual placeholder — Square fields wired with the backend. */}
-                <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
-                  <label className="block">
-                    <Label>{t('details.cardNumber')}</Label>
-                    <input className={inputCls} placeholder="1234 5678 9012 3456" inputMode="numeric" />
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="block">
-                      <Label>{t('details.expiry')}</Label>
-                      <input className={inputCls} placeholder="MM / YY" />
-                    </label>
-                    <label className="block">
-                      <Label>{t('details.cvc')}</Label>
-                      <input className={inputCls} placeholder="123" inputMode="numeric" />
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                        <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.6" />
-                        <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.6" />
-                      </svg>
-                      {t('details.securedBy')}
-                    </span>
-                    <span className="flex gap-1.5">
-                      {['VISA', 'MC', 'AMEX'].map((c) => (
-                        <span key={c} className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
-                          {c}
-                        </span>
-                      ))}
-                    </span>
-                  </div>
-                </div>
+                {/* Square Web Payments card form */}
+                <SquareCardForm
+                  onTokenReady={(fn) => { cardTokenizeRef.current = fn }}
+                  disabled={submitting}
+                />
 
                 {/* Tip — only when prepaying; paying at the store skips it. */}
                 <div>
@@ -216,6 +190,14 @@ export default function DetailsStep() {
                         onChange={(e) =>
                           patchDetails({ tipCustom: e.target.value.replace(/[^0-9.]/g, '') })
                         }
+                        onBlur={(e) => {
+                          const servicesTotal = guests.reduce((s, g) => s + (hasSelection(g.selection) ? selectionTotal(g.selection) : 0), 0)
+                          const maxTip = Math.min(servicesTotal, 100000)
+                          const num = parseFloat(e.target.value) || 0
+                          if (num > maxTip) {
+                            patchDetails({ tipCustom: String(maxTip) })
+                          }
+                        }}
                         placeholder={t('details.tipCustomPh')}
                         inputMode="decimal"
                       />

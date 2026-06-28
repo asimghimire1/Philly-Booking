@@ -2,6 +2,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 const express = require('express');
 const cors = require('cors');
 const apiRoutes = require('./routes/api');
+const paymentRoutes = require('./routes/payment');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -11,6 +12,9 @@ app.use(express.json());
 
 // Mount the API routes
 app.use('/api', apiRoutes);
+
+// Payment endpoint
+app.post('/api/payments/create', paymentRoutes.handleCreatePayment);
 
 // Basic health check route
 app.get('/health', (req, res) => {

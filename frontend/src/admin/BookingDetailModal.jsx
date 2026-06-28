@@ -78,7 +78,7 @@ export default function BookingDetailModal({ booking, onClose, onSetStatus, onEd
               </h3>
               <DetailRow label="Date" value={fmtDate(booking.date)} />
               <DetailRow label="Time" value={booking.time} />
-              <DetailRow label="Payment" value={<PaymentBadge payment={booking.payment} />} />
+              <DetailRow label="Payment" value={<PaymentBadge payment={booking.payment} paymentStatus={booking.paymentStatus} />} />
             </section>
 
             <section className="space-y-2">

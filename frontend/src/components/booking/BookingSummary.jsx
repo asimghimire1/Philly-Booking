@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useBooking } from '../../context/BookingContext.jsx'
 import { useI18n } from '../../i18n/LanguageContext.jsx'
@@ -32,12 +33,23 @@ function Row({ label, value, muted, valueClass = '' }) {
 }
 
 export default function BookingSummary() {
-  const { guests, allConfirmed, details, unlockStep, completeBooking, submitting, submitError, submitErrorDetail, dateTimeConfiguring, dateTimeShortfall } =
+  const { guests, allConfirmed, details, unlockStep, completeBooking, submitting, submitError, submitErrorDetail, dateTimeConfiguring, dateTimeShortfall, cardTokenizeRef } =
     useBooking()
   const { therapists } = useTherapists()
   const { t, lang } = useI18n()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+
+  // Warn the user if they try to leave while payment is processing
+  useEffect(() => {
+    if (!submitting) return
+    const onBeforeUnload = (e) => {
+      e.preventDefault()
+      e.returnValue = ''  // triggers browser warning dialog
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [submitting])
 
   const currentStep = stepForPath(pathname)
   const showBreakdown = currentStep === 2 || currentStep === 3
@@ -84,7 +96,7 @@ export default function BookingSummary() {
   const blocked =
     (currentStep === 2 && !servicesReady) ||
     (currentStep === 4 && (!dateTimeReady || dateTimeConfiguring || scheduleBlocked)) ||
-    (currentStep === 5 && (!detailsValid || scheduleBlocked))
+    (currentStep === 5 && (!detailsValid || scheduleBlocked || (details.payment === 'prepay' && !cardTokenizeRef.current)))
   const canContinue = (!!target || currentStep === 5) && !blocked && !submitting
 
   const footerText =
@@ -105,7 +117,9 @@ export default function BookingSummary() {
                   ? t('datetime.pickTime')
                   : t('summary.holdNote')
           : currentStep === 5
-            ? t('details.finalReview')
+            ? details.payment === 'prepay' && !cardTokenizeRef.current
+              ? lang === 'zh' ? '请等待支付表单加载...' : 'Loading payment form...'
+              : t('details.finalReview')
             : t('summary.disclaimer')
 
   const onContinue = async () => {

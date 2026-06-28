@@ -158,7 +158,10 @@ export function computeTip({ tipMode, tipCustom, payment }, servicesSubtotal) {
   if (tipMode === '20') return servicesSubtotal * 0.2
   if (tipMode === '25') return servicesSubtotal * 0.25
   if (tipMode === '30') return servicesSubtotal * 0.3
-  if (tipMode === 'custom') return Math.max(0, Number(tipCustom) || 0)
+  if (tipMode === 'custom') {
+    const v = Math.max(0, Number(tipCustom) || 0)
+    return Math.min(v, Math.min(servicesSubtotal, 100000))
+  }
   return 0
 }
 

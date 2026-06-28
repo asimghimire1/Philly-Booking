@@ -130,7 +130,7 @@ const now = nowIso()
                 <div className="hidden text-right sm:flex sm:flex-col sm:items-end">
                   <p className="font-semibold text-navy">{money(total(b))}</p>
                   <span className="mt-1">
-                    <PaymentBadge payment={b.payment} />
+                    <PaymentBadge payment={b.payment} paymentStatus={b.paymentStatus} />
                   </span>
                 </div>
                 <StatusBadge status={b.status} date={b.date} time={b.time} />

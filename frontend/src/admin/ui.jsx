@@ -83,7 +83,38 @@ export function StatusBadge({ status, date, time }) {
 export const paymentLabel = (p) =>
   p === 'prepay' ? 'Paid in advance' : p === 'visit' ? 'Pay in store' : p
 
-export function PaymentBadge({ payment }) {
+// Shows the actual payment_status when available, else falls back to payment method.
+function statusConfig(paymentStatus) {
+  if (paymentStatus === 'completed') return { label: 'Paid', cls: 'bg-emerald-100 text-emerald-700', icon: 'check' }
+  if (paymentStatus === 'pending') return { label: 'Pending', cls: 'bg-amber-100 text-amber-700', icon: 'clock' }
+  if (paymentStatus === 'failed') return { label: 'Failed', cls: 'bg-rose-100 text-rose-700', icon: 'x' }
+  return null
+}
+
+export function PaymentBadge({ payment, paymentStatus }) {
+  const s = statusConfig(paymentStatus)
+  if (s) {
+    return (
+      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${s.cls}`}>
+        {s.icon === 'check' ? (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+            <path d="M9 12l2 2 4-4M12 21a9 9 0 100-18 9 9 0 000 18z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : s.icon === 'clock' ? (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        )}
+        {s.label}
+      </span>
+    )
+  }
+
   const prepaid = payment === 'prepay'
   return (
     <span
