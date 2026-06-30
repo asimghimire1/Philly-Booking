@@ -1,3 +1,4 @@
+process.env.TZ = 'America/New_York'
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
