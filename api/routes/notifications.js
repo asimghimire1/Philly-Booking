@@ -40,7 +40,8 @@ function isSessionOver(bookingDate, bookingTime, durationMin) {
 }
 
 /**
- * Check if a booking is happening within the next ~12-13 hours
+ * Check if a booking is happening within ~12 hours (11.5–12.5h window).
+ * Tight window so the reminder fires exactly once per hourly cron.
  */
 function isWithin12hr(bookingDate, bookingTime) {
   const [y, m, d] = bookingDate.split('-').map(Number)
@@ -49,7 +50,7 @@ function isWithin12hr(bookingDate, bookingTime) {
   const now = new Date()
   const bookingStart = new Date(y, m - 1, d, Math.floor(startMin / 60), startMin % 60)
   const diffMs = bookingStart.getTime() - now.getTime()
-  return diffMs > 0 && diffMs <= 13 * 60 * 60 * 1000
+  return diffMs > 11.5 * 60 * 60 * 1000 && diffMs <= 12.5 * 60 * 60 * 1000
 }
 
 /**

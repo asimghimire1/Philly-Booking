@@ -30,9 +30,9 @@ async function runCron() {
     if (data.reminders || data.followups) {
       console.log(`Cron: ${data.reminders} reminders + ${data.followups} follow-ups sent`)
     }
-  } catch (err) { /* server starting — ignore */ }
+  } catch (err) { console.error('Cron self-fetch failed:', err.message) }
 }
-// Fires every hour at :00 (10 PM, 11 PM, 12 AM, etc.)
+// Fires every hour at :00
 const TARGET_MINUTE = 0
 const now = new Date()
 const currentMin = now.getMinutes()
