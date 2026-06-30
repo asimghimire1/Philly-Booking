@@ -118,7 +118,10 @@ export function BookingProvider({ children }) {
     setActiveId(id)
   }
 
+  const MAX_GUESTS = 10
+
   const addGuest = () => {
+    if (guests.length >= MAX_GUESTS) return
     const id = nextId
     // If nobody is being edited (all confirmed), open the new guest right away.
     const startNow = activeId === null

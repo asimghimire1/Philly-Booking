@@ -112,10 +112,8 @@ router.get('/notifications', async (req, res) => {
         try { party = JSON.parse(party) } catch { party = [] }
       }
 
-      // DEBUG: log what we're evaluating for each booking
       const within12 = isWithin12hr(date, time)
       const bookedWell = wasBookedWellInAdvance(b.created_at, date, time)
-      console.log(`[CRON] Booking ${b.id} | date=${date} time=${time} status=${b.status} | reminder_sent=${b.reminder_sent} within12hr=${within12} bookedWellInAdvance=${bookedWell}`)
 
       // ── Template 2: 12hr reminder ──
       // Only send if the booking was made more than 12hrs in advance.

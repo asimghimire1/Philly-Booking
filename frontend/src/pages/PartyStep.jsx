@@ -5,6 +5,8 @@ import InfoBox from '../components/booking/InfoBox.jsx'
 
 export default function PartyStep() {
   const { guests, addGuest, removeGuest } = useBooking()
+  const MAX_GUESTS = 10
+  const canAdd = guests.length < MAX_GUESTS
   const { t } = useI18n()
 
   return (
@@ -33,21 +35,27 @@ export default function PartyStep() {
           />
         ))}
 
-        <button
-          type="button"
-          onClick={addGuest}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-teal/40 py-4 font-medium text-teal transition-colors hover:border-teal hover:bg-mint/50"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 5v14M5 12h14"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
-          {t('guest.add')}
-        </button>
+        {canAdd ? (
+          <button
+            type="button"
+            onClick={addGuest}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-teal/40 py-4 font-medium text-teal transition-colors hover:border-teal hover:bg-mint/50"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+            {t('guest.add')}
+          </button>
+        ) : (
+          <p className="text-center text-sm text-slate-400">
+            Maximum 10 guests per booking
+          </p>
+        )}
       </div>
 
       <div className="mt-6">

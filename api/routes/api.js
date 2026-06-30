@@ -354,6 +354,13 @@ router.post('/bookings', async (req, res) => {
       bookingsToInsert = [body];
     }
 
+    if (bookingsToInsert.length > 10) {
+      return res.status(400).json({
+        error: 'MAX_GUESTS',
+        detail: 'Maximum 10 guests per booking.',
+      });
+    }
+
     const { isLocallyBlocked, recordBlock } = createLocalBlockedTracker();
 
     // Validate availability and auto-assign therapist for each booking
