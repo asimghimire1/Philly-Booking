@@ -69,9 +69,7 @@ function buildBookingPayload({ bookedGuests, details, totalTip, bookingGroupId, 
     const dateStr = g.dateTime?.date ? getLocalDateStr(g.dateTime.date) : ''
     return {
       p_customer_name: details.name.trim(),
-      p_customer_phone: details.phoneCode && details.phone.trim()
-        ? `${details.phoneCode} ${details.phone.replace(/\D/g, '')}`
-        : details.phone.trim(),
+      p_customer_phone: details.phone.trim(),
       p_customer_email: details.email.trim(),
       p_booking_date: dateStr,
       p_booking_time: g.dateTime?.time || '',
@@ -218,7 +216,6 @@ export function BookingProvider({ children }) {
   const [details, setDetails] = useState({
     name: '',
     phone: '',
-    phoneCode: '+86',
     email: '',
     note: '',
     tipMode: '25', // '20' | '25' | '30' | 'custom' | 'later'
@@ -342,7 +339,6 @@ export function BookingProvider({ children }) {
     setDetails({
       name: '',
       phone: '',
-      phoneCode: '+86',
       email: '',
       note: '',
       tipMode: '25',

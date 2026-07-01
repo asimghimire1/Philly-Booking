@@ -197,12 +197,8 @@ async function sendBookingEmails(bookingOrArray) {
   }
 
   const bookings = Array.isArray(bookingOrArray) ? bookingOrArray : [bookingOrArray]
-  const sentEmails = new Set()
 
   for (const b of bookings) {
-    // Deduplicate — only one email per customer even if they have multiple guests
-    if (sentEmails.has(b.customer_email)) continue
-    sentEmails.add(b.customer_email)
     let party = b.party
     if (typeof party === 'string') {
       try { party = JSON.parse(party) } catch { party = [] }

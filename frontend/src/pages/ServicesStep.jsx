@@ -188,7 +188,7 @@ function GuestEditor({ guest, name, avatar, primary, showHeader, showConfirm }) 
                   active={sel.comboId === c.id}
                   onClick={() => setCombo(guest.id, c.id)}
                 >
-                  {c.nameEn} · ${c.price}
+                  {c.nameEn} · {lang === 'zh' ? c.durationZh : c.durationEn} · ${c.price}
                 </Pill>
               ))}
             </div>
