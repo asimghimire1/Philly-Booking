@@ -5,7 +5,7 @@ import InfoBox from '../components/booking/InfoBox.jsx'
 
 export default function PartyStep() {
   const { guests, addGuest, removeGuest } = useBooking()
-  const MAX_GUESTS = 10
+  const MAX_GUESTS = 50
   const canAdd = guests.length < MAX_GUESTS
   const { t } = useI18n()
 
@@ -53,7 +53,7 @@ export default function PartyStep() {
           </button>
         ) : (
           <p className="text-center text-sm text-slate-400">
-            Maximum 10 guests per booking
+            Maximum 50 guests per booking
           </p>
         )}
       </div>

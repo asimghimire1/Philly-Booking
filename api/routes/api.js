@@ -354,10 +354,10 @@ router.post('/bookings', async (req, res) => {
       bookingsToInsert = [body];
     }
 
-    if (bookingsToInsert.length > 10) {
+    if (bookingsToInsert.length > 50) {
       return res.status(400).json({
         error: 'MAX_GUESTS',
-        detail: 'Maximum 10 guests per booking.',
+        detail: 'Maximum 50 guests per booking.',
       });
     }
 

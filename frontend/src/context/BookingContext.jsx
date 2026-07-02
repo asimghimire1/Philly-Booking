@@ -116,7 +116,7 @@ export function BookingProvider({ children }) {
     setActiveId(id)
   }
 
-  const MAX_GUESTS = 10
+  const MAX_GUESTS = 50
 
   const addGuest = () => {
     if (guests.length >= MAX_GUESTS) return
