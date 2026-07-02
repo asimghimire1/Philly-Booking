@@ -161,6 +161,7 @@ export const translations = {
     'confirm.services': 'Services',
     'confirm.addons': 'Add-ons',
     'confirm.totalCharged': 'Total charged',
+    'confirm.emailNote': 'A confirmation with all details has been sent to your email.',
     'gift.eyebrow': 'Give the gift of relief',
     'gift.title': 'Share Pain Away with someone you love',
     'gift.desc':
@@ -349,6 +350,7 @@ export const translations = {
     'confirm.services': '服务',
     'confirm.addons': '附加项目',
     'confirm.totalCharged': '已收取总额',
+    'confirm.emailNote': '包含所有详细信息的确认邮件已发送至您的邮箱。',
     'gift.eyebrow': '赠予放松好礼',
     'gift.title': '把 Pain Away 分享给您所爱的人',
     'gift.desc':

@@ -108,6 +108,7 @@ export default function ConfirmationPage() {
                   {t('confirm.title')}
                 </h1>
                 <p className="mt-1 text-slate-500">{t('confirm.subtitle')}</p>
+                <p className="mt-1.5 text-sm text-slate-400">{t('confirm.emailNote')}</p>
                 {bookingRef && bookingRef.length > 0 && (
                   <p className="mt-1 text-sm text-slate-500">
                     Confirmation #{bookingRef.join(', #')}
